@@ -1,0 +1,1673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>BSG Parts - Technician Ordering</title>
+    <style>
+        :root {
+            --primary-black: #1a1a1a;
+            --white: #ffffff;
+            --light-gray: #f5f5f5;
+            --medium-gray: #d0d0d0;
+            --dark-gray: #666666;
+            --accent-red: #e74c3c;
+            --accent-green: #27ae60;
+            --accent-yellow: #f39c12;
+            --border-color: #e0e0e0;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+
+            --font-size-xs: 12px;
+            --font-size-sm: 14px;
+            --font-size-base: 16px;
+            --font-size-lg: 18px;
+            --font-size-xl: 20px;
+            --font-size-2xl: 24px;
+
+            --min-touch-target: 44px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--primary-black);
+            color: var(--primary-black);
+            line-height: 1.5;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ===== LOGIN SCREEN ===== */
+        .login-screen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: var(--spacing-lg);
+            background-color: var(--primary-black);
+            color: var(--white);
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .bsg-logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto var(--spacing-lg);
+            background: url('bsg_logo.png') center / contain no-repeat;
+            background-color: var(--white);
+            border-radius: 8px;
+        }
+
+        .login-container h1 {
+            font-size: var(--font-size-2xl);
+            margin-bottom: var(--spacing-md);
+            font-weight: 600;
+        }
+
+        .login-container p {
+            color: var(--medium-gray);
+            margin-bottom: var(--spacing-lg);
+            font-size: var(--font-size-sm);
+        }
+
+        .pin-input-group {
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .pin-input {
+            width: 100%;
+            font-size: var(--font-size-2xl);
+            padding: var(--spacing-md);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            text-align: center;
+            letter-spacing: 12px;
+            background-color: var(--white);
+            color: var(--primary-black);
+            margin-bottom: var(--spacing-md);
+            font-weight: 600;
+            min-height: var(--min-touch-target);
+        }
+
+        .pin-input::placeholder {
+            letter-spacing: normal;
+        }
+
+        .numeric-keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .keypad-btn {
+            aspect-ratio: 1;
+            min-height: var(--min-touch-target);
+            background-color: var(--light-gray);
+            border: none;
+            border-radius: 8px;
+            font-size: var(--font-size-xl);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .keypad-btn:active {
+            background-color: var(--medium-gray);
+            transform: scale(0.95);
+        }
+
+        .keypad-btn.delete {
+            background-color: var(--accent-red);
+            color: var(--white);
+            font-size: var(--font-size-sm);
+        }
+
+        .sign-in-btn {
+            width: 100%;
+            padding: var(--spacing-md) var(--spacing-lg);
+            min-height: var(--min-touch-target);
+            background-color: var(--accent-green);
+            color: var(--white);
+            border: none;
+            border-radius: 8px;
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .sign-in-btn:hover:not(:disabled) {
+            background-color: #229954;
+        }
+
+        .sign-in-btn:disabled {
+            background-color: var(--medium-gray);
+            cursor: not-allowed;
+        }
+
+        .login-footer {
+            margin-top: var(--spacing-xl);
+            padding-top: var(--spacing-lg);
+            border-top: 1px solid var(--border-color);
+            font-size: var(--font-size-sm);
+        }
+
+        .login-footer a {
+            color: var(--accent-green);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .login-footer a:active {
+            opacity: 0.8;
+        }
+
+        /* ===== MAIN APP SCREEN ===== */
+        .main-screen {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .main-screen.active {
+            display: flex;
+        }
+
+        /* ===== HEADER ===== */
+        .header {
+            background-color: var(--white);
+            border-bottom: 1px solid var(--border-color);
+            padding: var(--spacing-sm) var(--spacing-md);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            box-shadow: var(--shadow);
+        }
+
+        .header-logo {
+            width: 40px;
+            height: 40px;
+            background: url('bsg_logo.png') center / contain no-repeat;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        .header-title {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header-title h1 {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .header-title p {
+            font-size: var(--font-size-xs);
+            color: var(--dark-gray);
+            margin: 0;
+        }
+
+        .logout-btn {
+            padding: var(--spacing-sm) var(--spacing-md);
+            background-color: var(--light-gray);
+            border: none;
+            border-radius: 4px;
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+            min-height: var(--min-touch-target);
+            min-width: var(--min-touch-target);
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .logout-btn:active {
+            background-color: var(--medium-gray);
+        }
+
+        /* ===== CONTENT AREA ===== */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .tab-content {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            overflow-y: auto;
+            padding: var(--spacing-md);
+        }
+
+        .tab-content.active {
+            display: flex;
+        }
+
+        /* ===== CARD COMPONENT ===== */
+        .card {
+            background-color: var(--white);
+            border-radius: 8px;
+            padding: var(--spacing-md);
+            border: 1px solid var(--border-color);
+            margin-bottom: var(--spacing-md);
+            box-shadow: var(--shadow);
+        }
+
+        .card h2 {
+            font-size: var(--font-size-lg);
+            margin: 0 0 var(--spacing-md) 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .card h2 button {
+            background: none;
+            border: none;
+            font-size: var(--font-size-lg);
+            cursor: pointer;
+            color: var(--dark-gray);
+        }
+
+        .card-content {
+            display: none;
+        }
+
+        .card-content.expanded {
+            display: block;
+        }
+
+        /* ===== FORM ELEMENTS ===== */
+        .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            margin-bottom: var(--spacing-xs);
+            color: var(--primary-black);
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: var(--font-size-base);
+            font-family: inherit;
+            min-height: var(--min-touch-target);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .toggle-group {
+            display: flex;
+            gap: var(--spacing-sm);
+            align-items: center;
+        }
+
+        .toggle-btn {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 2px solid var(--border-color);
+            background-color: var(--white);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            flex: 1;
+            min-height: var(--min-touch-target);
+            transition: all 0.2s ease;
+        }
+
+        .toggle-btn.active {
+            background-color: var(--primary-black);
+            color: var(--white);
+            border-color: var(--primary-black);
+        }
+
+        .toggle-btn.active.rush {
+            background-color: var(--accent-red);
+            border-color: var(--accent-red);
+        }
+
+        /* ===== SEARCH ===== */
+        .search-container {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: var(--font-size-base);
+            min-height: var(--min-touch-target);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary-black);
+        }
+
+        .search-results {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+
+        .search-result {
+            background-color: var(--white);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: var(--spacing-md);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .search-result:active {
+            background-color: var(--light-gray);
+            transform: scale(0.98);
+        }
+
+        .result-description {
+            font-weight: 600;
+            margin-bottom: var(--spacing-xs);
+            font-size: var(--font-size-base);
+        }
+
+        .result-meta {
+            font-size: var(--font-size-xs);
+            color: var(--dark-gray);
+            margin: var(--spacing-xs) 0;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: var(--spacing-lg);
+            color: var(--dark-gray);
+            font-size: var(--font-size-sm);
+        }
+
+        .loading {
+            text-align: center;
+            padding: var(--spacing-lg);
+            color: var(--dark-gray);
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--primary-black);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ===== MODAL ===== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: flex-end;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background-color: var(--white);
+            border-radius: 16px 16px 0 0;
+            padding: var(--spacing-lg);
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: var(--spacing-md);
+        }
+
+        .modal-header h2 {
+            font-size: var(--font-size-lg);
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: var(--font-size-xl);
+            cursor: pointer;
+            color: var(--dark-gray);
+            min-width: var(--min-touch-target);
+            min-height: var(--min-touch-target);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .quantity-control {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .qty-btn {
+            width: 44px;
+            height: 44px;
+            border: 1px solid var(--border-color);
+            background-color: var(--white);
+            border-radius: 4px;
+            font-size: var(--font-size-xl);
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .qty-display {
+            flex: 1;
+            text-align: center;
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+        }
+
+        .add-to-cart-modal-btn {
+            width: 100%;
+            padding: var(--spacing-md);
+            min-height: var(--min-touch-target);
+            background-color: var(--accent-green);
+            color: var(--white);
+            border: none;
+            border-radius: 8px;
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .add-to-cart-modal-btn:active {
+            background-color: #229954;
+        }
+
+        /* ===== CART/ORDER SUMMARY ===== */
+        .order-summary {
+            background-color: var(--white);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+        }
+
+        .summary-header {
+            padding: var(--spacing-md);
+            background-color: var(--light-gray);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .summary-header h3 {
+            margin: 0;
+            font-size: var(--font-size-base);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .cart-badge {
+            background-color: var(--accent-red);
+            color: var(--white);
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+        }
+
+        .summary-toggle {
+            background: none;
+            border: none;
+            font-size: var(--font-size-lg);
+            cursor: pointer;
+            color: var(--dark-gray);
+        }
+
+        .summary-content {
+            display: none;
+            padding: var(--spacing-md);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .summary-content.expanded {
+            display: block;
+        }
+
+        .cart-item {
+            padding: var(--spacing-md) 0;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: var(--spacing-md);
+        }
+
+        .cart-item:last-child {
+            border-bottom: none;
+        }
+
+        .cart-item-info {
+            flex: 1;
+        }
+
+        .cart-item-desc {
+            font-weight: 600;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .cart-item-meta {
+            font-size: var(--font-size-xs);
+            color: var(--dark-gray);
+        }
+
+        .cart-item-qty {
+            text-align: right;
+        }
+
+        .cart-item-qty p {
+            margin: var(--spacing-xs) 0;
+            font-size: var(--font-size-sm);
+        }
+
+        .remove-item-btn {
+            background-color: var(--accent-red);
+            color: var(--white);
+            border: none;
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: 4px;
+            font-size: var(--font-size-xs);
+            cursor: pointer;
+            margin-top: var(--spacing-sm);
+        }
+
+        .place-order-btn {
+            width: 100%;
+            padding: var(--spacing-md);
+            min-height: var(--min-touch-target);
+            background-color: var(--accent-green);
+            color: var(--white);
+            border: none;
+            border-radius: 8px;
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: var(--spacing-md);
+            transition: all 0.2s ease;
+        }
+
+        .place-order-btn:hover:not(:disabled) {
+            background-color: #229954;
+        }
+
+        .place-order-btn:disabled {
+            background-color: var(--medium-gray);
+            cursor: not-allowed;
+        }
+
+        /* ===== ORDERS LIST ===== */
+        .orders-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+
+        .order-card {
+            background-color: var(--white);
+            border-radius: 8px;
+            padding: var(--spacing-md);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .order-card:active {
+            background-color: var(--light-gray);
+        }
+
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--spacing-sm);
+            gap: var(--spacing-md);
+        }
+
+        .order-info h3 {
+            margin: 0;
+            font-size: var(--font-size-base);
+            font-weight: 600;
+        }
+
+        .order-date {
+            font-size: var(--font-size-xs);
+            color: var(--dark-gray);
+            margin-top: var(--spacing-xs);
+        }
+
+        .order-badges {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+            align-items: flex-end;
+        }
+
+        .badge {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: 4px;
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .badge.pending {
+            background-color: var(--light-gray);
+            color: var(--primary-black);
+        }
+
+        .badge.partial {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .badge.filled {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .badge.backordered {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .badge.normal {
+            background-color: var(--light-gray);
+        }
+
+        .badge.rush {
+            background-color: #fdd;
+            color: var(--accent-red);
+        }
+
+        .order-details {
+            display: none;
+            padding-top: var(--spacing-md);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .order-details.expanded {
+            display: block;
+        }
+
+        .order-line-item {
+            padding: var(--spacing-sm) 0;
+            font-size: var(--font-size-sm);
+        }
+
+        .line-desc {
+            font-weight: 600;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .line-qty {
+            color: var(--dark-gray);
+            font-size: var(--font-size-xs);
+            margin: var(--spacing-xs) 0;
+        }
+
+        .refresh-btn {
+            padding: var(--spacing-sm) var(--spacing-md);
+            background-color: var(--light-gray);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            min-height: var(--min-touch-target);
+            margin-bottom: var(--spacing-md);
+            transition: all 0.2s ease;
+        }
+
+        .refresh-btn:active {
+            background-color: var(--medium-gray);
+        }
+
+        /* ===== BOTTOM NAVIGATION ===== */
+        .bottom-nav {
+            display: flex;
+            background-color: var(--white);
+            border-top: 1px solid var(--border-color);
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+            position: sticky;
+            bottom: 0;
+        }
+
+        .nav-tab {
+            flex: 1;
+            padding: var(--spacing-md);
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--spacing-xs);
+            min-height: 60px;
+            justify-content: center;
+            color: var(--dark-gray);
+            transition: all 0.2s ease;
+            border-top: 3px solid transparent;
+        }
+
+        .nav-tab.active {
+            color: var(--primary-black);
+            border-top-color: var(--primary-black);
+            background-color: var(--light-gray);
+        }
+
+        .nav-icon {
+            font-size: var(--font-size-xl);
+        }
+
+        /* ===== TOAST NOTIFICATIONS ===== */
+        .toast {
+            position: fixed;
+            bottom: 70px;
+            left: var(--spacing-md);
+            right: var(--spacing-md);
+            padding: var(--spacing-md);
+            background-color: var(--primary-black);
+            color: var(--white);
+            border-radius: 8px;
+            z-index: 900;
+            animation: slideUpToast 0.3s ease, slideDownToast 0.3s ease 2.7s forwards;
+            box-shadow: var(--shadow-md);
+        }
+
+        .toast.success {
+            background-color: var(--accent-green);
+        }
+
+        .toast.error {
+            background-color: var(--accent-red);
+        }
+
+        @keyframes slideUpToast {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes slideDownToast {
+            from { transform: translateY(0); opacity: 1; }
+            to { transform: translateY(100%); opacity: 0; }
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (min-width: 768px) {
+            .login-container {
+                max-width: 500px;
+            }
+
+            .content {
+                padding: var(--spacing-lg);
+            }
+
+            .tab-content {
+                padding: var(--spacing-lg);
+            }
+
+            .numeric-keypad {
+                max-width: 300px;
+                margin-left: auto;
+                margin-right: auto;
+            }
+        }
+
+        /* ===== UTILITY CLASSES ===== */
+        .hidden {
+            display: none !important;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-error {
+            color: var(--accent-red);
+            font-size: var(--font-size-sm);
+        }
+    </style>
+</head>
+<body>
+    <!-- LOGIN SCREEN -->
+    <div id="loginScreen" class="login-screen active">
+        <div class="login-container">
+            <div class="bsg-logo"></div>
+            <h1>BSG Parts</h1>
+            <p>Technician Ordering System</p>
+
+            <div class="pin-input-group">
+                <input
+                    type="password"
+                    id="pinInput"
+                    class="pin-input"
+                    placeholder="••••"
+                    inputmode="numeric"
+                    maxlength="6"
+                    autocomplete="off"
+                >
+
+                <div class="numeric-keypad">
+                    <button class="keypad-btn" data-key="1">1</button>
+                    <button class="keypad-btn" data-key="2">2</button>
+                    <button class="keypad-btn" data-key="3">3</button>
+                    <button class="keypad-btn" data-key="4">4</button>
+                    <button class="keypad-btn" data-key="5">5</button>
+                    <button class="keypad-btn" data-key="6">6</button>
+                    <button class="keypad-btn" data-key="7">7</button>
+                    <button class="keypad-btn" data-key="8">8</button>
+                    <button class="keypad-btn" data-key="9">9</button>
+                    <button class="keypad-btn" data-key="0">0</button>
+                    <button class="keypad-btn delete" id="deleteBtn">Delete</button>
+                </div>
+            </div>
+
+            <button id="signInBtn" class="sign-in-btn" disabled>Sign In</button>
+
+            <div class="login-footer">
+                <p>Are you on the Parts Team?</p>
+                <a href="fulfillment.html">Go to Fulfillment</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP SCREEN -->
+    <div id="mainScreen" class="main-screen">
+        <!-- HEADER -->
+        <div class="header">
+            <div class="header-logo"></div>
+            <div class="header-title">
+                <h1>BSG Parts</h1>
+                <p id="techName"></p>
+            </div>
+            <button id="logoutBtn" class="logout-btn">Logout</button>
+        </div>
+
+        <!-- CONTENT AREA -->
+        <div class="content">
+            <!-- TAB: NEW ORDER -->
+            <div id="newOrderTab" class="tab-content active">
+                <!-- ORDER INFO CARD -->
+                <div class="card">
+                    <h2>
+                        Order Info
+                        <button class="card-toggle">▼</button>
+                    </h2>
+                    <div class="card-content expanded">
+                        <div class="form-group">
+                            <label for="accountField">Account / Location *</label>
+                            <input type="text" id="accountField" placeholder="Enter account or location name" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Urgency</label>
+                            <div class="toggle-group">
+                                <button class="toggle-btn active" data-urgency="normal">Normal</button>
+                                <button class="toggle-btn" data-urgency="rush">Rush</button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="notesField">Notes (Optional)</label>
+                            <textarea id="notesField" placeholder="Add any special instructions..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PARTS SEARCH -->
+                <div class="search-container">
+                    <input
+                        type="text"
+                        id="searchInput"
+                        class="search-input"
+                        placeholder="Search by Item #, Description, or Vendor"
+                        autocomplete="off"
+                    >
+                </div>
+
+                <div id="searchResults" class="search-results">
+                    <p class="text-center no-results">Enter search terms to find parts</p>
+                </div>
+            </div>
+
+            <!-- TAB: MY ORDERS -->
+            <div id="myOrdersTab" class="tab-content">
+                <button id="refreshOrdersBtn" class="refresh-btn">Refresh Orders</button>
+                <div id="ordersList" class="orders-list">
+                    <p class="text-center no-results">No orders yet</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ORDER SUMMARY (Bottom-sticky) -->
+        <div class="order-summary">
+            <div class="summary-header">
+                <h3>
+                    Cart
+                    <span class="cart-badge" id="cartCount">0</span>
+                </h3>
+                <button class="summary-toggle">▼</button>
+            </div>
+            <div class="summary-content">
+                <div id="cartItemsList"></div>
+                <button id="placeOrderBtn" class="place-order-btn" disabled>Place Order</button>
+            </div>
+        </div>
+
+        <!-- BOTTOM NAVIGATION -->
+        <div class="bottom-nav">
+            <button class="nav-tab active" data-tab="newOrder">
+                <span class="nav-icon">+</span>
+                <span>New Order</span>
+            </button>
+            <button class="nav-tab" data-tab="myOrders">
+                <span class="nav-icon">📋</span>
+                <span>My Orders</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- QUANTITY MODAL -->
+    <div id="quantityModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modalItemDesc"></h2>
+                <button id="closeModalBtn" class="modal-close">✕</button>
+            </div>
+            <div id="modalItemMeta"></div>
+            <div class="form-group">
+                <label>Quantity</label>
+                <div class="quantity-control">
+                    <button id="qtyDecBtn" class="qty-btn">−</button>
+                    <div class="qty-display" id="qtyDisplay">1</div>
+                    <button id="qtyIncBtn" class="qty-btn">+</button>
+                </div>
+            </div>
+            <button id="addToCartBtn" class="add-to-cart-modal-btn">Add to Cart</button>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="parts_data.js"></script>
+    <script>
+        // ===== CONFIGURATION =====
+        const API_URL = 'YOUR_APPS_SCRIPT_URL_HERE';
+
+        // ===== STATE MANAGEMENT =====
+        const state = {
+            isLoggedIn: false,
+            techInfo: null,
+            cart: [],
+            searchQuery: '',
+            urgency: 'normal',
+            currentSearchedItem: null,
+        };
+
+        // ===== DOM ELEMENTS =====
+        const loginScreen = document.getElementById('loginScreen');
+        const mainScreen = document.getElementById('mainScreen');
+        const pinInput = document.getElementById('pinInput');
+        const signInBtn = document.getElementById('signInBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const deleteBtn = document.getElementById('deleteBtn');
+        const keypadBtns = document.querySelectorAll('.keypad-btn:not(.delete)');
+        const searchInput = document.getElementById('searchInput');
+        const searchResults = document.getElementById('searchResults');
+        const cartCount = document.getElementById('cartCount');
+        const cartItemsList = document.getElementById('cartItemsList');
+        const placeOrderBtn = document.getElementById('placeOrderBtn');
+        const quantityModal = document.getElementById('quantityModal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const qtyDecBtn = document.getElementById('qtyDecBtn');
+        const qtyIncBtn = document.getElementById('qtyIncBtn');
+        const qtyDisplay = document.getElementById('qtyDisplay');
+        const addToCartBtn = document.getElementById('addToCartBtn');
+        const accountField = document.getElementById('accountField');
+        const notesField = document.getElementById('notesField');
+        const navTabs = document.querySelectorAll('.nav-tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const ordersList = document.getElementById('ordersList');
+        const refreshOrdersBtn = document.getElementById('refreshOrdersBtn');
+        const newOrderTab = document.getElementById('newOrderTab');
+        const myOrdersTab = document.getElementById('myOrdersTab');
+        const summaryToggle = document.querySelector('.summary-toggle');
+        const summaryContent = document.querySelector('.summary-content');
+        const techNameEl = document.getElementById('techName');
+
+        // ===== INITIALIZATION =====
+        function init() {
+            loadSessionState();
+            if (state.isLoggedIn) {
+                showMainScreen();
+            } else {
+                showLoginScreen();
+            }
+            attachEventListeners();
+        }
+
+        function attachEventListeners() {
+            // Keypad
+            keypadBtns.forEach(btn => {
+                btn.addEventListener('click', handleKeypadInput);
+            });
+            deleteBtn.addEventListener('click', handleDelete);
+            pinInput.addEventListener('input', updateSignInButton);
+            pinInput.addEventListener('keydown', handlePinKeydown);
+
+            // Sign in
+            signInBtn.addEventListener('click', handleSignIn);
+            logoutBtn.addEventListener('click', handleLogout);
+
+            // Search
+            searchInput.addEventListener('input', handleSearch);
+
+            // Quantity modal
+            closeModalBtn.addEventListener('click', closeQuantityModal);
+            qtyDecBtn.addEventListener('click', decreaseQty);
+            qtyIncBtn.addEventListener('click', increaseQty);
+            addToCartBtn.addEventListener('click', addToCart);
+
+            // Cart/Order summary
+            summaryToggle.addEventListener('click', toggleSummary);
+            placeOrderBtn.addEventListener('click', handlePlaceOrder);
+
+            // Urgency toggle
+            document.querySelectorAll('[data-urgency]').forEach(btn => {
+                btn.addEventListener('click', handleUrgencyToggle);
+            });
+
+            // Card toggles
+            document.querySelectorAll('.card-toggle').forEach(btn => {
+                btn.addEventListener('click', handleCardToggle);
+            });
+
+            // Navigation tabs
+            navTabs.forEach(tab => {
+                tab.addEventListener('click', handleTabSwitch);
+            });
+
+            // My Orders
+            refreshOrdersBtn.addEventListener('click', loadOrders);
+
+            // Order card toggles
+            document.addEventListener('click', handleOrderCardToggle);
+        }
+
+        // ===== LOGIN FLOW =====
+        function handleKeypadInput(e) {
+            const key = e.target.dataset.key;
+            const current = pinInput.value;
+            if (current.length < 6) {
+                pinInput.value = current + key;
+                pinInput.focus();
+            }
+        }
+
+        function handleDelete() {
+            pinInput.value = pinInput.value.slice(0, -1);
+            updateSignInButton();
+        }
+
+        function handlePinKeydown(e) {
+            if (e.key === 'Enter' && pinInput.value.length >= 4) {
+                handleSignIn();
+            } else if (e.key === 'Backspace') {
+                e.preventDefault();
+                handleDelete();
+            }
+        }
+
+        function updateSignInButton() {
+            signInBtn.disabled = pinInput.value.length < 4;
+        }
+
+        async function handleSignIn() {
+            const pin = pinInput.value;
+            if (pin.length < 4) return;
+
+            showLoading(signInBtn);
+            try {
+                const response = await fetch(`${API_URL}?action=verifyTechPIN&pin=${encodeURIComponent(pin)}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    state.isLoggedIn = true;
+                    state.techInfo = result.data;
+                    saveSessionState();
+                    showMainScreen();
+                    showToast(`Welcome, ${result.data.name}!`, 'success');
+                } else {
+                    showToast(result.error || 'Invalid PIN', 'error');
+                    pinInput.value = '';
+                    updateSignInButton();
+                }
+            } catch (error) {
+                showToast('Error verifying PIN. Check your connection.', 'error');
+                console.error('Sign in error:', error);
+            } finally {
+                hideLoading(signInBtn);
+            }
+        }
+
+        function handleLogout() {
+            state.isLoggedIn = false;
+            state.techInfo = null;
+            state.cart = [];
+            clearSessionState();
+            pinInput.value = '';
+            accountField.value = '';
+            notesField.value = '';
+            searchInput.value = '';
+            searchResults.innerHTML = '<p class="text-center no-results">Enter search terms to find parts</p>';
+            updateSignInButton();
+            showLoginScreen();
+            showToast('You have been logged out', 'success');
+        }
+
+        // ===== SCREEN MANAGEMENT =====
+        function showLoginScreen() {
+            loginScreen.classList.add('active');
+            mainScreen.classList.remove('active');
+        }
+
+        function showMainScreen() {
+            loginScreen.classList.remove('active');
+            mainScreen.classList.add('active');
+            if (state.techInfo) {
+                techNameEl.textContent = state.techInfo.name;
+            }
+            loadCart();
+        }
+
+        // ===== SEARCH FUNCTIONALITY =====
+        let searchTimeout;
+        function handleSearch(e) {
+            clearTimeout(searchTimeout);
+            const query = e.target.value.toLowerCase().trim();
+            state.searchQuery = query;
+
+            if (!query) {
+                searchResults.innerHTML = '<p class="text-center no-results">Enter search terms to find parts</p>';
+                return;
+            }
+
+            searchTimeout = setTimeout(() => {
+                performSearch(query);
+            }, 300);
+        }
+
+        function performSearch(query) {
+            if (!window.PARTS_CATALOG) {
+                searchResults.innerHTML = '<p class="text-center text-error">Parts data not loaded</p>';
+                return;
+            }
+
+            const filtered = PARTS_CATALOG.filter(part => {
+                const itemNum = part.itemNum.toLowerCase();
+                const desc = part.desc.toLowerCase();
+                const vendor = part.vendor.toLowerCase();
+                return itemNum.includes(query) || desc.includes(query) || vendor.includes(query);
+            });
+
+            if (filtered.length === 0) {
+                searchResults.innerHTML = '<p class="text-center no-results">No parts found</p>';
+                return;
+            }
+
+            searchResults.innerHTML = filtered.map(part => `
+                <div class="search-result" data-item-num="${part.itemNum}">
+                    <div class="result-description">${part.desc}</div>
+                    <div class="result-meta">Item #: ${part.itemNum}</div>
+                    <div class="result-meta">Vendor: ${part.vendor}</div>
+                    <div class="result-meta">Vendor Item #: ${part.vendorItem}</div>
+                    <div class="result-meta">UOM: ${part.uom}</div>
+                </div>
+            `).join('');
+
+            // Attach click handlers
+            document.querySelectorAll('.search-result').forEach(el => {
+                el.addEventListener('click', () => openQuantityModal(el.dataset.itemNum));
+            });
+        }
+
+        // ===== QUANTITY MODAL =====
+        function openQuantityModal(itemNum) {
+            const part = PARTS_CATALOG.find(p => p.itemNum === itemNum);
+            if (!part) return;
+
+            state.currentSearchedItem = part;
+            document.getElementById('modalItemDesc').textContent = part.desc;
+            document.getElementById('modalItemMeta').innerHTML = `
+                <div class="result-meta">Item #: ${part.itemNum}</div>
+                <div class="result-meta">Vendor: ${part.vendor}</div>
+                <div class="result-meta">Vendor Item #: ${part.vendorItem}</div>
+                <div class="result-meta">UOM: ${part.uom}</div>
+            `;
+            qtyDisplay.textContent = '1';
+            quantityModal.classList.add('active');
+        }
+
+        function closeQuantityModal() {
+            quantityModal.classList.remove('active');
+            state.currentSearchedItem = null;
+        }
+
+        function decreaseQty() {
+            const current = parseInt(qtyDisplay.textContent);
+            if (current > 1) {
+                qtyDisplay.textContent = current - 1;
+            }
+        }
+
+        function increaseQty() {
+            const current = parseInt(qtyDisplay.textContent);
+            qtyDisplay.textContent = current + 1;
+        }
+
+        function addToCart() {
+            if (!state.currentSearchedItem) return;
+
+            const qty = parseInt(qtyDisplay.textContent);
+            const part = state.currentSearchedItem;
+
+            const existingItem = state.cart.find(item => item.itemNum === part.itemNum);
+            if (existingItem) {
+                existingItem.qty += qty;
+            } else {
+                state.cart.push({
+                    ...part,
+                    qty: qty,
+                });
+            }
+
+            saveCart();
+            loadCart();
+            closeQuantityModal();
+            showToast(`${part.desc} added to cart`, 'success');
+        }
+
+        // ===== CART MANAGEMENT =====
+        function loadCart() {
+            updateCartCount();
+            renderCartItems();
+            placeOrderBtn.disabled = state.cart.length === 0;
+        }
+
+        function updateCartCount() {
+            const count = state.cart.reduce((sum, item) => sum + item.qty, 0);
+            cartCount.textContent = count;
+        }
+
+        function renderCartItems() {
+            if (state.cart.length === 0) {
+                cartItemsList.innerHTML = '<p class="text-center no-results">No items in cart</p>';
+                return;
+            }
+
+            cartItemsList.innerHTML = state.cart.map((item, index) => `
+                <div class="cart-item">
+                    <div class="cart-item-info">
+                        <div class="cart-item-desc">${item.desc}</div>
+                        <div class="cart-item-meta">Item #: ${item.itemNum}</div>
+                        <div class="cart-item-meta">Vendor: ${item.vendor}</div>
+                    </div>
+                    <div class="cart-item-qty">
+                        <p>Qty: <strong>${item.qty}</strong></p>
+                        <button class="remove-item-btn" data-index="${index}">Remove</button>
+                    </div>
+                </div>
+            `).join('');
+
+            document.querySelectorAll('.remove-item-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const index = parseInt(btn.dataset.index);
+                    state.cart.splice(index, 1);
+                    saveCart();
+                    loadCart();
+                    showToast('Item removed from cart', 'success');
+                });
+            });
+        }
+
+        function saveCart() {
+            sessionStorage.setItem('bsg_cart', JSON.stringify(state.cart));
+        }
+
+        function loadCartFromStorage() {
+            const stored = sessionStorage.getItem('bsg_cart');
+            if (stored) {
+                try {
+                    state.cart = JSON.parse(stored);
+                } catch (e) {
+                    state.cart = [];
+                }
+            }
+        }
+
+        // ===== PLACE ORDER =====
+        async function handlePlaceOrder() {
+            if (state.cart.length === 0) {
+                showToast('Cart is empty', 'error');
+                return;
+            }
+
+            if (!accountField.value.trim()) {
+                showToast('Account/Location is required', 'error');
+                accountField.focus();
+                return;
+            }
+
+            showLoading(placeOrderBtn);
+            try {
+                const payload = {
+                    action: 'placeOrder',
+                    techId: state.techInfo.id,
+                    techEmail: state.techInfo.email,
+                    account: accountField.value,
+                    urgency: state.urgency,
+                    notes: notesField.value,
+                    items: state.cart.map(item => ({
+                        itemNum: item.itemNum,
+                        desc: item.desc,
+                        qty: item.qty,
+                        uom: item.uom,
+                    })),
+                };
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast(`Order placed! ID: ${result.data.orderId}`, 'success');
+                    state.cart = [];
+                    saveCart();
+                    loadCart();
+                    accountField.value = '';
+                    notesField.value = '';
+                    state.urgency = 'normal';
+                    updateUrgencyUI();
+                    searchInput.value = '';
+                    searchResults.innerHTML = '<p class="text-center no-results">Enter search terms to find parts</p>';
+                    loadOrders();
+                } else {
+                    showToast(result.error || 'Error placing order', 'error');
+                }
+            } catch (error) {
+                showToast('Network error placing order', 'error');
+                console.error('Place order error:', error);
+            } finally {
+                hideLoading(placeOrderBtn);
+            }
+        }
+
+        // ===== MY ORDERS =====
+        async function loadOrders() {
+            if (!state.techInfo) return;
+
+            showLoading(refreshOrdersBtn);
+            try {
+                const response = await fetch(`${API_URL}?action=getOrdersByTech&techId=${encodeURIComponent(state.techInfo.id)}`);
+                const result = await response.json();
+
+                if (result.success && result.data.orders && result.data.orders.length > 0) {
+                    renderOrders(result.data.orders);
+                } else {
+                    ordersList.innerHTML = '<p class="text-center no-results">No orders yet</p>';
+                }
+            } catch (error) {
+                ordersList.innerHTML = '<p class="text-center text-error">Error loading orders</p>';
+                console.error('Load orders error:', error);
+            } finally {
+                hideLoading(refreshOrdersBtn);
+            }
+        }
+
+        function renderOrders(orders) {
+            ordersList.innerHTML = orders.map((order, index) => {
+                const statusClass = order.status.toLowerCase();
+                const urgencyClass = order.urgency === 'rush' ? 'rush' : 'normal';
+                const date = new Date(order.date).toLocaleDateString();
+
+                let itemsHTML = '';
+                if (order.items && Array.isArray(order.items)) {
+                    itemsHTML = order.items.map(item => `
+                        <div class="order-line-item">
+                            <div class="line-desc">${item.desc}</div>
+                            <div class="line-qty">Qty Ordered: ${item.qtyOrdered}</div>
+                            <div class="line-qty">Qty Filled: ${item.qtyFilled || 0}</div>
+                            <div class="line-qty">Qty Backordered: ${item.qtyBackordered || 0}</div>
+                            <div class="line-qty">Status: <span class="badge ${(item.status || 'pending').toLowerCase()}">${item.status || 'Pending'}</span></div>
+                        </div>
+                    `).join('');
+                }
+
+                return `
+                    <div class="order-card" data-order-index="${index}">
+                        <div class="order-header">
+                            <div class="order-info">
+                                <h3>Order #${order.orderId}</h3>
+                                <div class="order-date">${date}</div>
+                                <div class="order-date">${order.account}</div>
+                            </div>
+                            <div class="order-badges">
+                                <span class="badge ${statusClass}">${order.status}</span>
+                                <span class="badge ${urgencyClass}">${order.urgency}</span>
+                            </div>
+                        </div>
+                        <div class="order-details">
+                            ${itemsHTML}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function handleOrderCardToggle(e) {
+            const orderCard = e.target.closest('.order-card');
+            if (!orderCard) return;
+
+            const details = orderCard.querySelector('.order-details');
+            if (details) {
+                details.classList.toggle('expanded');
+            }
+        }
+
+        // ===== UI HELPERS =====
+        function handleUrgencyToggle(e) {
+            document.querySelectorAll('[data-urgency]').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            e.target.classList.add('active');
+            state.urgency = e.target.dataset.urgency;
+        }
+
+        function updateUrgencyUI() {
+            document.querySelectorAll('[data-urgency]').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.urgency === state.urgency) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+
+        function handleCardToggle(e) {
+            const card = e.target.closest('.card');
+            const content = card.querySelector('.card-content');
+            if (content) {
+                content.classList.toggle('expanded');
+                e.target.textContent = content.classList.contains('expanded') ? '▼' : '▶';
+            }
+        }
+
+        function handleTabSwitch(e) {
+            const tabName = e.currentTarget.dataset.tab;
+
+            navTabs.forEach(tab => tab.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+
+            tabContents.forEach(content => content.classList.remove('active'));
+
+            if (tabName === 'newOrder') {
+                newOrderTab.classList.add('active');
+            } else if (tabName === 'myOrders') {
+                myOrdersTab.classList.add('active');
+                loadOrders();
+            }
+        }
+
+        function toggleSummary() {
+            summaryContent.classList.toggle('expanded');
+            summaryToggle.textContent = summaryContent.classList.contains('expanded') ? '▲' : '▼';
+        }
+
+        function showLoading(element) {
+            if (!element) return;
+            element.disabled = true;
+            const original = element.textContent;
+            element.innerHTML = '<span class="spinner"></span>';
+            element.dataset.original = original;
+        }
+
+        function hideLoading(element) {
+            if (!element || !element.dataset.original) return;
+            element.textContent = element.dataset.original;
+            element.disabled = state.cart.length === 0 && element === placeOrderBtn;
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // ===== SESSION STORAGE =====
+        function saveSessionState() {
+            sessionStorage.setItem('bsg_tech_info', JSON.stringify(state.techInfo));
+            sessionStorage.setItem('bsg_logged_in', 'true');
+        }
+
+        function loadSessionState() {
+            const loggedIn = sessionStorage.getItem('bsg_logged_in') === 'true';
+            if (loggedIn) {
+                const techInfo = sessionStorage.getItem('bsg_tech_info');
+                if (techInfo) {
+                    try {
+                        state.techInfo = JSON.parse(techInfo);
+                        state.isLoggedIn = true;
+                    } catch (e) {
+                        clearSessionState();
+                    }
+                }
+            }
+            loadCartFromStorage();
+        }
+
+        function clearSessionState() {
+            sessionStorage.removeItem('bsg_tech_info');
+            sessionStorage.removeItem('bsg_logged_in');
+            sessionStorage.removeItem('bsg_cart');
+            state.isLoggedIn = false;
+            state.techInfo = null;
+        }
+
+        // ===== START APP =====
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
