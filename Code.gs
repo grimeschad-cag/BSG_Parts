@@ -1,5 +1,98 @@
 // BSG Parts Ordering App - Google Apps Script Backend
 // This script handles all backend operations for the BSG Parts ordering system
+//
+// FIRST TIME SETUP:
+//   1. Open this script in a blank Google Sheet (Extensions > Apps Script)
+//   2. Paste this entire file into Code.gs
+//   3. Click the function dropdown (top toolbar), select "setupSheet", then click Run ▶
+//   4. Authorize when prompted
+//   5. Deploy > New deployment > Web app > Execute as: Me, Access: Anyone > Deploy
+//   6. Copy the Web App URL and paste it into each HTML file's API_URL constant
+
+// ============================================================================
+// ONE-TIME SETUP FUNCTION — Run this first!
+// ============================================================================
+
+function setupSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // Remove default "Sheet1" if it exists and is empty
+  const defaultSheet = ss.getSheetByName("Sheet1");
+
+  // Create Orders sheet
+  let orders = ss.getSheetByName("Orders");
+  if (!orders) {
+    orders = ss.insertSheet("Orders");
+  }
+  orders.getRange(1, 1, 1, 9).setValues([["OrderID", "TechName", "TechEmail", "TechPIN", "Account", "Urgency", "Notes", "OrderDate", "Status"]]);
+  orders.getRange(1, 1, 1, 9).setFontWeight("bold").setBackground("#1a1a1a").setFontColor("#ffffff");
+  orders.setFrozenRows(1);
+  orders.autoResizeColumns(1, 9);
+
+  // Create OrderItems sheet
+  let items = ss.getSheetByName("OrderItems");
+  if (!items) {
+    items = ss.insertSheet("OrderItems");
+  }
+  items.getRange(1, 1, 1, 12).setValues([["OrderID", "ItemNumber", "ItemDescription", "VendorName", "VendorItemNum", "UOM", "QtyOrdered", "QtyFilled", "QtyBackordered", "LineStatus", "FillDate", "FillNotes"]]);
+  items.getRange(1, 1, 1, 12).setFontWeight("bold").setBackground("#1a1a1a").setFontColor("#ffffff");
+  items.setFrozenRows(1);
+  items.autoResizeColumns(1, 12);
+
+  // Create Technicians sheet
+  let techs = ss.getSheetByName("Technicians");
+  if (!techs) {
+    techs = ss.insertSheet("Technicians");
+  }
+  techs.getRange(1, 1, 1, 4).setValues([["Name", "PIN", "Email", "Active"]]);
+  techs.getRange(1, 1, 1, 4).setFontWeight("bold").setBackground("#1a1a1a").setFontColor("#ffffff");
+  techs.setFrozenRows(1);
+  // Add a sample technician so you can test immediately
+  techs.getRange(2, 1, 1, 4).setValues([["Admin Test", "0000", "grimeschad@gmail.com", true]]);
+  techs.autoResizeColumns(1, 4);
+
+  // Create Config sheet
+  let config = ss.getSheetByName("Config");
+  if (!config) {
+    config = ss.insertSheet("Config");
+  }
+  config.getRange(1, 1, 1, 2).setValues([["Key", "Value"]]);
+  config.getRange(1, 1, 1, 2).setFontWeight("bold").setBackground("#1a1a1a").setFontColor("#ffffff");
+  config.getRange(2, 1, 3, 2).setValues([
+    ["PartsTeamPIN", "1234"],
+    ["AdminPIN", "9999"],
+    ["PartsTeamEmail", "grimeschad@gmail.com"]
+  ]);
+  config.setFrozenRows(1);
+  config.autoResizeColumns(1, 2);
+
+  // Remove default Sheet1 if it still exists
+  if (defaultSheet) {
+    try { ss.deleteSheet(defaultSheet); } catch(e) { /* ignore if can't delete */ }
+  }
+
+  // Rename the spreadsheet
+  ss.rename("BSG Parts App — Backend");
+
+  SpreadsheetApp.getUi().alert(
+    "✅ Setup Complete!\\n\\n" +
+    "Sheets created: Orders, OrderItems, Technicians, Config\\n\\n" +
+    "Default PINs:\\n" +
+    "  • Test Tech PIN: 0000\\n" +
+    "  • Parts Team PIN: 1234\\n" +
+    "  • Admin PIN: 9999\\n\\n" +
+    "Next step: Deploy > New deployment > Web app\\n" +
+    "  Execute as: Me | Access: Anyone"
+  );
+}
+
+// ============================================================================
+// SHEET REFERENCES (lazy-loaded to avoid errors before setup)
+// ============================================================================
+
+function getSheet(name) {
+  return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
+}
 
 const SS = SpreadsheetApp.getActiveSpreadsheet();
 const ORDERS_SHEET = SS.getSheetByName("Orders");
