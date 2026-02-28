@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BSG Parts — Admin Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Login Screen */
+        .login-screen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f5f5f5;
+        }
+
+        .login-card {
+            background: white;
+            border-radius: 8px;
+            padding: 40px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .login-card img {
+            width: 100px;
+            height: auto;
+            margin-bottom: 30px;
+        }
+
+        .login-card h1 {
+            font-size: 28px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 10px;
+        }
+
+        .login-card p {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #1a1a1a;
+            box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.1);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 500;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background-color: #1a1a1a;
+            color: white;
+            width: 100%;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background-color: #333;
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background-color: #e0e0e0;
+            color: #1a1a1a;
+            margin-right: 10px;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background-color: #d0d0d0;
+        }
+
+        .btn-danger {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background-color: #c0392b;
+        }
+
+        .btn-success {
+            background-color: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background-color: #229954;
+        }
+
+        /* Dashboard */
+        .dashboard {
+            display: none;
+        }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .dashboard-header h1 {
+            font-size: 28px;
+            color: #1a1a1a;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .dashboard-header img {
+            width: 40px;
+            height: 40px;
+        }
+
+        .logout-btn {
+            background-color: #e74c3c;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .logout-btn:hover {
+            background-color: #c0392b;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e0e0e0;
+            background: white;
+            padding: 0;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .tab-button {
+            padding: 15px 25px;
+            background: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            margin-bottom: -2px;
+        }
+
+        .tab-button.active {
+            color: #1a1a1a;
+            border-bottom-color: #1a1a1a;
+        }
+
+        .tab-button:hover {
+            color: #1a1a1a;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Technicians Tab */
+        .technicians-container {
+            background: white;
+            padding: 25px;
+            border-radius: 0 8px 8px 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 20px;
+            padding-top: 20px;
+        }
+
+        .section-title:first-child {
+            padding-top: 0;
+        }
+
+        .add-technician-btn {
+            margin-bottom: 25px;
+            padding: 12px 20px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .add-technician-btn:hover {
+            background-color: #229954;
+        }
+
+        .technicians-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+
+        .technicians-table thead {
+            background-color: #f9f9f9;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .technicians-table th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #1a1a1a;
+            font-size: 14px;
+        }
+
+        .technicians-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 14px;
+        }
+
+        .technicians-table tbody tr:hover {
+            background-color: #f9f9f9;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 500;
+            font-size: 12px;
+        }
+
+        .status-active {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status-inactive {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-buttons button {
+            padding: 6px 12px;
+            font-size: 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .btn-edit {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .btn-edit:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-toggle {
+            background-color: #f39c12;
+            color: white;
+        }
+
+        .btn-toggle:hover {
+            background-color: #e67e22;
+        }
+
+        .config-section {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .config-field {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .config-field label {
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .config-field input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .config-field input:focus {
+            outline: none;
+            border-color: #1a1a1a;
+            box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.1);
+        }
+
+        .save-config-btn {
+            align-self: flex-start;
+            padding: 10px 20px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .save-config-btn:hover {
+            background-color: #229954;
+        }
+
+        /* Form Modal/Inline */
+        .form-container {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 4px;
+            margin-bottom: 25px;
+            display: none;
+        }
+
+        .form-container.show {
+            display: block;
+        }
+
+        .form-container h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 15px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .form-field {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-field label {
+            font-weight: 500;
+            color: #1a1a1a;
+            margin-bottom: 6px;
+            font-size: 13px;
+        }
+
+        .form-field input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-field input:focus {
+            outline: none;
+            border-color: #1a1a1a;
+            box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.1);
+        }
+
+        .form-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .form-buttons button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            font-weight: 500;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-save {
+            background-color: #27ae60;
+            color: white;
+        }
+
+        .btn-save:hover {
+            background-color: #229954;
+        }
+
+        .btn-cancel {
+            background-color: #95a5a6;
+            color: white;
+        }
+
+        .btn-cancel:hover {
+            background-color: #7f8c8d;
+        }
+
+        /* Deploy Tab */
+        .deploy-container {
+            background: white;
+            padding: 25px;
+            border-radius: 0 8px 8px 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .upload-section {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .upload-section h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 15px;
+        }
+
+        .upload-area {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .file-input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            display: none;
+        }
+
+        .choose-file-btn {
+            padding: 10px 16px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: 500;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .choose-file-btn:hover {
+            background-color: #2980b9;
+        }
+
+        .filename-display {
+            color: #666;
+            font-size: 13px;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .custom-name-field {
+            display: none;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .custom-name-field input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .custom-name-field input:focus {
+            outline: none;
+            border-color: #1a1a1a;
+        }
+
+        .upload-btn {
+            padding: 10px 20px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: 500;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .upload-btn:hover:not(:disabled) {
+            background-color: #229954;
+        }
+
+        .upload-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .upload-status {
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .upload-status.show {
+            display: block;
+        }
+
+        .upload-status.loading {
+            background-color: #e8f4f8;
+            color: #016c84;
+        }
+
+        .upload-status.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .upload-status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 16px 20px;
+            border-radius: 4px;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            animation: slideIn 0.3s ease-out;
+            z-index: 1000;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .toast.success {
+            background-color: #27ae60;
+        }
+
+        .toast.error {
+            background-color: #e74c3c;
+        }
+
+        .toast.info {
+            background-color: #3498db;
+        }
+
+        /* Error Message */
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border: 1px solid #f5c6cb;
+        }
+
+        .error-message p {
+            margin: 0;
+            font-size: 14px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .login-card {
+                padding: 25px;
+            }
+
+            .dashboard-header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .dashboard-header h1 {
+                flex-direction: column;
+            }
+
+            .tabs {
+                flex-wrap: wrap;
+            }
+
+            .tab-button {
+                padding: 12px 16px;
+                font-size: 14px;
+            }
+
+            .config-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .upload-area {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .file-input-wrapper {
+                min-width: auto;
+            }
+
+            .choose-file-btn,
+            .upload-btn {
+                width: 100%;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .action-buttons button {
+                width: 100%;
+            }
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error-text {
+            color: #e74c3c;
+            font-size: 13px;
+            margin-top: 6px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div class="login-screen" id="loginScreen">
+        <div class="login-card">
+            <img src="bsg_logo.png" alt="BSG Logo">
+            <h1>BSG Parts</h1>
+            <p>Admin Panel</p>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="adminPIN">Admin PIN</label>
+                    <input type="password" id="adminPIN" placeholder="Enter your PIN" required>
+                    <div class="error-text" id="loginError" style="display: none;"></div>
+                </div>
+                <button type="submit" class="btn btn-primary">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="dashboard" id="dashboard">
+        <div class="container">
+            <div class="dashboard-header">
+                <h1>
+                    <img src="bsg_logo.png" alt="BSG Logo">
+                    BSG Parts — Admin
+                </h1>
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab-button active" onclick="switchTab('technicians')">Manage Technicians</button>
+                <button class="tab-button" onclick="switchTab('deploy')">Deploy to GitHub</button>
+            </div>
+
+            <!-- Tab 1: Manage Technicians -->
+            <div class="tab-content active" id="technicians">
+                <div class="technicians-container">
+                    <div class="section-title">Technicians</div>
+                    <button class="add-technician-btn" onclick="toggleAddTechnicianForm()">+ Add New Technician</button>
+
+                    <!-- Add Technician Form -->
+                    <div class="form-container" id="addTechnicianForm">
+                        <h3>Add New Technician</h3>
+                        <div class="form-grid">
+                            <div class="form-field">
+                                <label for="techName">Name</label>
+                                <input type="text" id="techName" placeholder="Technician Name">
+                            </div>
+                            <div class="form-field">
+                                <label for="techPIN">PIN</label>
+                                <input type="text" id="techPIN" placeholder="PIN (must be unique)">
+                                <div class="error-text" id="pinError" style="display: none;"></div>
+                            </div>
+                            <div class="form-field">
+                                <label for="techEmail">Email</label>
+                                <input type="email" id="techEmail" placeholder="Email address">
+                            </div>
+                        </div>
+                        <div class="form-buttons">
+                            <button class="btn btn-save" onclick="saveTechnician()">Save Technician</button>
+                            <button class="btn btn-cancel" onclick="toggleAddTechnicianForm()">Cancel</button>
+                        </div>
+                    </div>
+
+                    <!-- Technicians Table -->
+                    <table class="technicians-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>PIN</th>
+                                <th>Email</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="techniciansTableBody">
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 20px; color: #999;">Loading technicians...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- Config Section -->
+                    <div class="config-section">
+                        <div class="section-title" style="padding-top: 0; margin-bottom: 20px;">Configuration</div>
+                        <div class="config-grid">
+                            <div class="config-field">
+                                <label for="partsTeamPIN">Parts Team PIN</label>
+                                <input type="text" id="partsTeamPIN" placeholder="Parts Team PIN">
+                            </div>
+                            <div class="config-field">
+                                <label for="partsTeamEmail">Parts Team Email</label>
+                                <input type="email" id="partsTeamEmail" placeholder="Parts Team Email">
+                            </div>
+                            <div class="config-field">
+                                <label for="adminPINConfig">Admin PIN</label>
+                                <input type="password" id="adminPINConfig" placeholder="Admin PIN">
+                            </div>
+                        </div>
+                        <button class="save-config-btn" onclick="saveConfig()">Save Configuration</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: Deploy to GitHub -->
+            <div class="tab-content" id="deploy">
+                <div class="deploy-container">
+                    <div class="section-title">Deploy to GitHub</div>
+                    <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Upload files directly to the BSG Parts GitHub repository. Updates will be live in approximately 1 minute.</p>
+
+                    <div style="background: #f5f5f5; border: 1px solid #ddd; border-radius: 10px; padding: 16px; margin-bottom: 25px;">
+                        <label style="font-weight: 700; font-size: 14px; display: block; margin-bottom: 8px;">GitHub Token (required to push)</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="password" id="githubTokenInput" placeholder="Paste your GitHub token here" style="flex:1; padding: 10px 14px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px;">
+                            <button onclick="setGithubToken()" style="padding: 10px 20px; background: #1a1a1a; color: #fff; border: none; border-radius: 6px; font-weight: 700; cursor: pointer;">Set Token</button>
+                        </div>
+                        <div id="tokenStatus" style="margin-top: 8px; font-size: 13px; color: #666;">Token not set — uploads will fail without it</div>
+                    </div>
+
+                    <!-- Upload index.html -->
+                    <div class="upload-section">
+                        <h3>Upload index.html</h3>
+                        <div class="upload-area">
+                            <div class="file-input-wrapper">
+                                <input type="file" id="fileIndexHTML" accept=".html">
+                                <button class="choose-file-btn" onclick="document.getElementById('fileIndexHTML').click()">Choose File</button>
+                                <span class="filename-display" id="filenameIndexHTML">No file selected</span>
+                            </div>
+                            <button class="upload-btn" id="uploadBtnIndexHTML" onclick="uploadFile('fileIndexHTML', 'index.html', 'statusIndexHTML')" disabled>Upload</button>
+                        </div>
+                        <div class="upload-status" id="statusIndexHTML"></div>
+                    </div>
+
+                    <!-- Upload fulfillment.html -->
+                    <div class="upload-section">
+                        <h3>Upload fulfillment.html</h3>
+                        <div class="upload-area">
+                            <div class="file-input-wrapper">
+                                <input type="file" id="fileFulfillmentHTML" accept=".html">
+                                <button class="choose-file-btn" onclick="document.getElementById('fileFulfillmentHTML').click()">Choose File</button>
+                                <span class="filename-display" id="filenameFulfillmentHTML">No file selected</span>
+                            </div>
+                            <button class="upload-btn" id="uploadBtnFulfillmentHTML" onclick="uploadFile('fileFulfillmentHTML', 'fulfillment.html', 'statusFulfillmentHTML')" disabled>Upload</button>
+                        </div>
+                        <div class="upload-status" id="statusFulfillmentHTML"></div>
+                    </div>
+
+                    <!-- Upload uploader.html -->
+                    <div class="upload-section">
+                        <h3>Upload uploader.html</h3>
+                        <div class="upload-area">
+                            <div class="file-input-wrapper">
+                                <input type="file" id="fileUploaderHTML" accept=".html">
+                                <button class="choose-file-btn" onclick="document.getElementById('fileUploaderHTML').click()">Choose File</button>
+                                <span class="filename-display" id="filenameUploaderHTML">No file selected</span>
+                            </div>
+                            <button class="upload-btn" id="uploadBtnUploaderHTML" onclick="uploadFile('fileUploaderHTML', 'uploader.html', 'statusUploaderHTML')" disabled>Upload</button>
+                        </div>
+                        <div class="upload-status" id="statusUploaderHTML"></div>
+                    </div>
+
+                    <!-- Upload parts_data.js -->
+                    <div class="upload-section">
+                        <h3>Upload Parts Data (parts_data.js)</h3>
+                        <div class="upload-area">
+                            <div class="file-input-wrapper">
+                                <input type="file" id="filePartsData" accept=".js">
+                                <button class="choose-file-btn" onclick="document.getElementById('filePartsData').click()">Choose File</button>
+                                <span class="filename-display" id="filenamePartsData">No file selected</span>
+                            </div>
+                            <button class="upload-btn" id="uploadBtnPartsData" onclick="uploadFile('filePartsData', 'parts_data.js', 'statusPartsData')" disabled>Upload</button>
+                        </div>
+                        <div class="upload-status" id="statusPartsData"></div>
+                    </div>
+
+                    <!-- Upload BSG Logo -->
+                    <div class="upload-section">
+                        <h3>Upload Logo (bsg_logo.png)</h3>
+                        <div class="upload-area">
+                            <div class="file-input-wrapper">
+                                <input type="file" id="fileLogo" accept="image/*">
+                                <button class="choose-file-btn" onclick="document.getElementById('fileLogo').click()">Choose File</button>
+                                <span class="filename-display" id="filenameLogo">No file selected</span>
+                            </div>
+                            <button class="upload-btn" id="uploadBtnLogo" onclick="uploadFile('fileLogo', 'bsg_logo.png', 'statusLogo')" disabled>Upload</button>
+                        </div>
+                        <div class="upload-status" id="statusLogo"></div>
+                    </div>
+
+                    <!-- Upload Any File -->
+                    <div class="upload-section">
+                        <h3>Upload Any File</h3>
+                        <div class="upload-area">
+                            <div class="file-input-wrapper">
+                                <input type="file" id="fileAny">
+                                <button class="choose-file-btn" onclick="document.getElementById('fileAny').click()">Choose File</button>
+                                <span class="filename-display" id="filenameAny">No file selected</span>
+                            </div>
+                            <div class="custom-name-field" id="customNameField">
+                                <input type="text" id="customFileName" placeholder="Filename in repo (e.g., path/to/file.ext)">
+                            </div>
+                            <button class="upload-btn" id="uploadBtnAny" onclick="uploadFile('fileAny', null, 'statusAny', true)" disabled>Upload</button>
+                        </div>
+                        <div class="upload-status" id="statusAny"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'YOUR_APPS_SCRIPT_URL_HERE';
+        let GITHUB_TOKEN = '';
+        const GITHUB_REPO = 'grimeschad-cag/BSG_Parts';
+        const GITHUB_OWNER = 'grimeschad-cag';
+        const GITHUB_EMAIL = 'grimeschad@gmail.com';
+
+        function setGithubToken() {
+            const input = document.getElementById('githubTokenInput');
+            const status = document.getElementById('tokenStatus');
+            if (input.value.trim()) {
+                GITHUB_TOKEN = input.value.trim();
+                status.innerHTML = '<span style="color: #27ae60; font-weight: 700;">✅ Token set — ready to upload</span>';
+            } else {
+                status.innerHTML = '<span style="color: #e74c3c;">Please paste a valid token</span>';
+            }
+        }
+
+        let adminPIN = null;
+        let technicians = [];
+        let config = {};
+
+        // ============ LOGIN ============
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const pin = document.getElementById('adminPIN').value;
+            const errorEl = document.getElementById('loginError');
+
+            errorEl.style.display = 'none';
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: new FormData(Object.entries({ action: 'verifyAdminPIN', pin }).reduce((f, [k, v]) => { f.append(k, v); return f; }, new FormData()))
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    adminPIN = pin;
+                    showDashboard();
+                } else {
+                    errorEl.textContent = 'Invalid PIN';
+                    errorEl.style.display = 'block';
+                }
+            } catch (err) {
+                console.error('Login error:', err);
+                errorEl.textContent = 'Error verifying PIN. Please try again.';
+                errorEl.style.display = 'block';
+            }
+        });
+
+        function showDashboard() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            loadTechnicians();
+            loadConfig();
+        }
+
+        function logout() {
+            adminPIN = null;
+            technicians = [];
+            config = {};
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('adminPIN').value = '';
+            document.getElementById('loginForm').reset();
+        }
+
+        // ============ TAB SWITCHING ============
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
+
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // ============ TECHNICIANS ============
+        async function loadTechnicians() {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: new FormData(Object.entries({ action: 'getTechnicians' }).reduce((f, [k, v]) => { f.append(k, v); return f; }, new FormData()))
+                });
+
+                const data = await response.json();
+
+                if (data.success && Array.isArray(data.technicians)) {
+                    technicians = data.technicians;
+                    renderTechnicians();
+                }
+            } catch (err) {
+                console.error('Error loading technicians:', err);
+                showToast('Error loading technicians', 'error');
+            }
+        }
+
+        function renderTechnicians() {
+            const tbody = document.getElementById('techniciansTableBody');
+
+            if (technicians.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #999;">No technicians found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = technicians.map((tech, idx) => `
+                <tr>
+                    <td>${tech.name || ''}</td>
+                    <td><code style="background: #f0f0f0; padding: 2px 6px; border-radius: 2px; font-family: monospace;">${tech.pin || ''}</code></td>
+                    <td>${tech.email || ''}</td>
+                    <td>
+                        <span class="status-badge ${tech.active ? 'status-active' : 'status-inactive'}">
+                            ${tech.active ? 'Active' : 'Inactive'}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn-edit" onclick="editTechnician(${idx})">Edit</button>
+                            <button class="btn-toggle" onclick="toggleTechnicianStatus(${idx})">
+                                ${tech.active ? 'Deactivate' : 'Activate'}
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function toggleAddTechnicianForm() {
+            const form = document.getElementById('addTechnicianForm');
+            form.classList.toggle('show');
+
+            if (form.classList.contains('show')) {
+                document.getElementById('techName').focus();
+            } else {
+                clearTechnicianForm();
+            }
+        }
+
+        function clearTechnicianForm() {
+            document.getElementById('techName').value = '';
+            document.getElementById('techPIN').value = '';
+            document.getElementById('techEmail').value = '';
+            document.getElementById('pinError').style.display = 'none';
+        }
+
+        async function saveTechnician() {
+            const name = document.getElementById('techName').value.trim();
+            const pin = document.getElementById('techPIN').value.trim();
+            const email = document.getElementById('techEmail').value.trim();
+            const pinError = document.getElementById('pinError');
+
+            pinError.style.display = 'none';
+
+            if (!name || !pin || !email) {
+                showToast('Please fill in all fields', 'error');
+                return;
+            }
+
+            if (technicians.some(t => t.pin === pin)) {
+                pinError.textContent = 'PIN already exists';
+                pinError.style.display = 'block';
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('action', 'addTechnician');
+                formData.append('name', name);
+                formData.append('pin', pin);
+                formData.append('email', email);
+
+                const response = await fetch(API_URL, { method: 'POST', body: formData });
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('Technician added successfully', 'success');
+                    clearTechnicianForm();
+                    toggleAddTechnicianForm();
+                    loadTechnicians();
+                } else {
+                    showToast('Error adding technician', 'error');
+                }
+            } catch (err) {
+                console.error('Error:', err);
+                showToast('Error adding technician', 'error');
+            }
+        }
+
+        function editTechnician(idx) {
+            showToast('Edit functionality coming soon', 'info');
+        }
+
+        async function toggleTechnicianStatus(idx) {
+            const tech = technicians[idx];
+
+            try {
+                const formData = new FormData();
+                formData.append('action', 'updateTechnician');
+                formData.append('pin', tech.pin);
+                formData.append('active', !tech.active);
+
+                const response = await fetch(API_URL, { method: 'POST', body: formData });
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast(`Technician ${!tech.active ? 'activated' : 'deactivated'}`, 'success');
+                    loadTechnicians();
+                } else {
+                    showToast('Error updating technician status', 'error');
+                }
+            } catch (err) {
+                console.error('Error:', err);
+                showToast('Error updating technician status', 'error');
+            }
+        }
+
+        // ============ CONFIG ============
+        async function loadConfig() {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: new FormData(Object.entries({ action: 'getConfig' }).reduce((f, [k, v]) => { f.append(k, v); return f; }, new FormData()))
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    config = data.config || {};
+                    document.getElementById('partsTeamPIN').value = config.partsTeamPIN || '';
+                    document.getElementById('partsTeamEmail').value = config.partsTeamEmail || '';
+                    document.getElementById('adminPINConfig').value = config.adminPIN || '';
+                }
+            } catch (err) {
+                console.error('Error loading config:', err);
+            }
+        }
+
+        async function saveConfig() {
+            const partsTeamPIN = document.getElementById('partsTeamPIN').value.trim();
+            const partsTeamEmail = document.getElementById('partsTeamEmail').value.trim();
+            const adminPINConfig = document.getElementById('adminPINConfig').value.trim();
+
+            if (!partsTeamPIN || !partsTeamEmail || !adminPINConfig) {
+                showToast('Please fill in all configuration fields', 'error');
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('action', 'updateConfig');
+                formData.append('partsTeamPIN', partsTeamPIN);
+                formData.append('partsTeamEmail', partsTeamEmail);
+                formData.append('adminPIN', adminPINConfig);
+
+                const response = await fetch(API_URL, { method: 'POST', body: formData });
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('Configuration saved successfully', 'success');
+                    config = { partsTeamPIN, partsTeamEmail, adminPIN: adminPINConfig };
+                } else {
+                    showToast('Error saving configuration', 'error');
+                }
+            } catch (err) {
+                console.error('Error:', err);
+                showToast('Error saving configuration', 'error');
+            }
+        }
+
+        // ============ FILE UPLOAD HANDLING ============
+        document.querySelectorAll('input[type="file"]').forEach(input => {
+            input.addEventListener('change', (e) => {
+                const display = document.getElementById('filename' + input.id.charAt(4).toUpperCase() + input.id.slice(5));
+                const uploadBtn = document.getElementById('uploadBtn' + input.id.charAt(4).toUpperCase() + input.id.slice(5));
+
+                if (input.files.length > 0) {
+                    const filename = input.files[0].name;
+                    if (display) display.textContent = filename;
+
+                    // Show custom name field for "any file"
+                    if (input.id === 'fileAny') {
+                        document.getElementById('customNameField').style.display = 'flex';
+                    }
+
+                    if (uploadBtn) uploadBtn.disabled = false;
+                } else {
+                    if (display) display.textContent = 'No file selected';
+                    if (uploadBtn) uploadBtn.disabled = true;
+                }
+            });
+        });
+
+        async function uploadFile(fileInputId, repoPath, statusElementId, isCustomName = false) {
+            const fileInput = document.getElementById(fileInputId);
+            const file = fileInput.files[0];
+
+            if (!file) {
+                showToast('No file selected', 'error');
+                return;
+            }
+
+            // For custom files, use the filename from the input field
+            if (isCustomName) {
+                const customName = document.getElementById('customFileName').value.trim();
+                if (!customName) {
+                    showToast('Please enter a filename for the repo', 'error');
+                    return;
+                }
+                repoPath = customName;
+            }
+
+            await pushToGitHub(file, repoPath, document.getElementById(statusElementId));
+        }
+
+        async function pushToGitHub(file, repoPath, statusEl) {
+            if (!GITHUB_TOKEN) {
+                statusEl.className = 'upload-status show error';
+                statusEl.innerHTML = 'Set your GitHub token first (above)';
+                return;
+            }
+            statusEl.className = 'upload-status show loading';
+            statusEl.innerHTML = '<span class="loading-spinner"></span>Reading file...';
+
+            const reader = new FileReader();
+
+            reader.onload = async function() {
+                const base64 = reader.result.split(',')[1];
+
+                statusEl.innerHTML = '<span class="loading-spinner"></span>Checking GitHub...';
+
+                const token = GITHUB_TOKEN;
+                const url = `https://api.github.com/repos/${GITHUB_REPO}/contents/${repoPath}`;
+
+                const body = {
+                    message: `Update ${repoPath}`,
+                    content: base64,
+                    committer: {
+                        name: GITHUB_OWNER,
+                        email: GITHUB_EMAIL
+                    }
+                };
+
+                try {
+                    // Check if file exists
+                    const existing = await fetch(url, {
+                        headers: { 'Authorization': `token ${token}` }
+                    });
+
+                    if (existing.status === 200) {
+                        const data = await existing.json();
+                        body.sha = data.sha;
+                    }
+
+                    statusEl.innerHTML = '<span class="loading-spinner"></span>Pushing to GitHub...';
+
+                    const push = await fetch(url, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `token ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(body)
+                    });
+
+                    const result = await push.json();
+
+                    if (push.status === 200 || push.status === 201) {
+                        statusEl.className = 'upload-status show success';
+                        statusEl.innerHTML = '✅ Pushed successfully! Site updates in ~1 min';
+                        showToast(`${repoPath} uploaded successfully`, 'success');
+                    } else {
+                        statusEl.className = 'upload-status show error';
+                        statusEl.innerHTML = `Error: ${result.message}`;
+                        showToast(`Error uploading ${repoPath}`, 'error');
+                    }
+                } catch(err) {
+                    statusEl.className = 'upload-status show error';
+                    statusEl.innerHTML = `Error: ${err.message}`;
+                    showToast(`Error uploading file: ${err.message}`, 'error');
+                }
+            };
+
+            reader.onerror = function() {
+                statusEl.className = 'upload-status show error';
+                statusEl.innerHTML = 'Error reading file';
+                showToast('Error reading file', 'error');
+            };
+
+            reader.readAsDataURL(file);
+        }
+
+        // ============ NOTIFICATIONS ============
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'slideIn 0.3s ease-out reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
