@@ -1014,12 +1014,18 @@
                                 <button class="toggle-btn active" data-shipping="scheduled">Scheduled Delivery</button>
                                 <button class="toggle-btn" data-shipping="ups">UPS</button>
                                 <button class="toggle-btn" data-shipping="customer">Ship to Customer</button>
+                                <button class="toggle-btn" data-shipping="home">My Home/Warehouse</button>
                             </div>
                         </div>
 
                         <div class="form-group" id="shipToAddressGroup" style="display: none;">
                             <label for="shipToAddress">Ship-To Address *</label>
                             <textarea id="shipToAddress" placeholder="Enter full shipping address..." rows="3" style="min-height: 70px;"></textarea>
+                            <div id="savedAddressActions" style="display: none; margin-top: 8px; gap: 8px; align-items: center;">
+                                <button type="button" id="saveAddressBtn" style="padding: 6px 12px; font-size: 12px; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer;">Save as My Address</button>
+                                <button type="button" id="loadAddressBtn" style="padding: 6px 12px; font-size: 12px; background: #1a1a1a; color: white; border: none; border-radius: 4px; cursor: pointer; display: none;">Use Saved Address</button>
+                                <span id="savedAddressLabel" style="font-size: 11px; color: #4caf50; display: none;">Address saved!</span>
+                            </div>
                         </div>
 
                         <div class="form-group">
@@ -1196,6 +1202,10 @@
             document.querySelectorAll('[data-shipping]').forEach(btn => {
                 btn.addEventListener('click', handleShippingToggle);
             });
+
+            // Saved address buttons
+            document.getElementById('saveAddressBtn').addEventListener('click', saveHomeAddress);
+            document.getElementById('loadAddressBtn').addEventListener('click', loadSavedAddress);
 
             // Card toggles
             document.querySelectorAll('.card-toggle').forEach(btn => {
@@ -1480,7 +1490,7 @@
             }
 
             const shipToAddress = document.getElementById('shipToAddress').value.trim();
-            if ((state.shipping === 'ups' || state.shipping === 'customer') && !shipToAddress) {
+            if (['ups', 'customer', 'home'].includes(state.shipping) && !shipToAddress) {
                 showToast('Ship-to address is required', 'error');
                 document.getElementById('shipToAddress').focus();
                 return;
@@ -1488,7 +1498,7 @@
 
             showLoading(placeOrderBtn);
             try {
-                const shippingLabels = { scheduled: 'Scheduled Delivery', ups: 'UPS', customer: 'Ship to Customer' };
+                const shippingLabels = { scheduled: 'Scheduled Delivery', ups: 'UPS', customer: 'Ship to Customer', home: 'Ship to Home/Warehouse' };
                 const payload = {
                     action: 'placeOrder',
                     techPin: state.techInfo.pin,
@@ -1563,24 +1573,53 @@
             }
         }
 
-        function renderOrders(orders) {
+        function normalizeOrderData(orders) {
+            if (!orders) return [];
+            return orders.map(o => ({
+                orderId: o.OrderID || o.orderId,
+                techName: o.TechName || o.techName,
+                account: o.Account || o.account,
+                urgency: o.Urgency || o.urgency,
+                shipping: o.Shipping || o.shipping || 'Scheduled Delivery',
+                shipToAddress: o.ShipToAddress || o.shipToAddress || '',
+                notes: o.Notes || o.notes,
+                orderDate: o.OrderDate || o.orderDate || o.date,
+                status: o.Status || o.status,
+                items: (o.items || []).map(i => ({
+                    itemNumber: i.ItemNumber || i.itemNumber,
+                    description: i.ItemDescription || i.description || i.desc,
+                    uom: i.UOM || i.uom,
+                    qtyOrdered: i.QtyOrdered || i.qtyOrdered,
+                    qtyFilled: i.QtyFilled || i.qtyFilled || 0,
+                    qtyBackordered: i.QtyBackordered || i.qtyBackordered || 0,
+                    status: i.LineStatus || i.status || 'Pending',
+                }))
+            }));
+        }
+
+        function renderOrders(rawOrders) {
+            const orders = normalizeOrderData(rawOrders);
             ordersList.innerHTML = orders.map((order, index) => {
-                const statusClass = order.status.toLowerCase();
-                const urgencyClass = (order.urgency === 'rush' || order.urgency === 'nextday' || order.urgency === 'Next Day Air') ? 'rush' : 'normal';
-                const urgencyLabel = order.urgency === 'nextday' ? 'Next Day Air' : (order.urgency === 'Next Day Air' ? 'Next Day Air' : order.urgency);
-                const date = new Date(order.date).toLocaleDateString();
+                const statusClass = (order.status || 'open').toLowerCase();
+                const urgencyClass = (order.urgency === 'Rush' || order.urgency === 'nextday' || order.urgency === 'Next Day Air') ? 'rush' : 'normal';
+                const urgencyLabel = (order.urgency === 'nextday' || order.urgency === 'Next Day Air') ? 'Next Day Air' : (order.urgency || 'Normal');
+                const date = order.orderDate ? new Date(order.orderDate).toLocaleDateString() : '';
 
                 let itemsHTML = '';
                 if (order.items && Array.isArray(order.items)) {
-                    itemsHTML = order.items.map(item => `
-                        <div class="order-line-item">
-                            <div class="line-desc">${item.desc}</div>
+                    itemsHTML = order.items.map(item => {
+                        const remaining = (item.qtyOrdered || 0) - (item.qtyFilled || 0);
+                        const isComplete = item.status === 'Filled';
+                        return `
+                        <div class="order-line-item" style="${isComplete ? 'opacity: 0.5;' : ''}">
+                            <div class="line-desc">${item.description}</div>
                             <div class="line-qty">Qty Ordered: ${item.qtyOrdered}</div>
                             <div class="line-qty">Qty Filled: ${item.qtyFilled || 0}</div>
-                            <div class="line-qty">Qty Backordered: ${item.qtyBackordered || 0}</div>
+                            ${remaining > 0 ? `<div class="line-qty" style="color: #d32f2f; font-weight: 600;">Remaining: ${remaining}</div>` : ''}
+                            ${(item.qtyBackordered || 0) > 0 ? `<div class="line-qty" style="color: #e65100;">Backordered: ${item.qtyBackordered}</div>` : ''}
                             <div class="line-qty">Status: <span class="badge ${(item.status || 'pending').toLowerCase()}">${item.status || 'Pending'}</span></div>
-                        </div>
-                    `).join('');
+                        </div>`;
+                    }).join('');
                 }
 
                 return `
@@ -1638,14 +1677,7 @@
             });
             e.target.classList.add('active');
             state.shipping = e.target.dataset.shipping;
-
-            const addressGroup = document.getElementById('shipToAddressGroup');
-            if (state.shipping === 'ups' || state.shipping === 'customer') {
-                addressGroup.style.display = 'block';
-            } else {
-                addressGroup.style.display = 'none';
-                document.getElementById('shipToAddress').value = '';
-            }
+            updateShippingAddressVisibility();
         }
 
         function updateShippingUI() {
@@ -1655,11 +1687,70 @@
                     btn.classList.add('active');
                 }
             });
+            updateShippingAddressVisibility();
+        }
+
+        function updateShippingAddressVisibility() {
             const addressGroup = document.getElementById('shipToAddressGroup');
-            if (state.shipping === 'ups' || state.shipping === 'customer') {
+            const savedActions = document.getElementById('savedAddressActions');
+            const saveBtn = document.getElementById('saveAddressBtn');
+            const loadBtn = document.getElementById('loadAddressBtn');
+            const shipToAddress = document.getElementById('shipToAddress');
+            const needsAddress = ['ups', 'customer', 'home'].includes(state.shipping);
+
+            if (needsAddress) {
                 addressGroup.style.display = 'block';
+                savedActions.style.display = 'flex';
+
+                // If "home" selected, auto-load saved address
+                if (state.shipping === 'home') {
+                    const savedAddr = getSavedHomeAddress();
+                    if (savedAddr) {
+                        shipToAddress.value = savedAddr;
+                    }
+                    saveBtn.style.display = 'inline-block';
+                    loadBtn.style.display = 'none';
+                } else {
+                    // For UPS/customer, show "Use Saved" button if address exists
+                    const savedAddr = getSavedHomeAddress();
+                    saveBtn.style.display = 'inline-block';
+                    loadBtn.style.display = savedAddr ? 'inline-block' : 'none';
+                }
             } else {
                 addressGroup.style.display = 'none';
+                savedActions.style.display = 'none';
+                shipToAddress.value = '';
+            }
+            document.getElementById('savedAddressLabel').style.display = 'none';
+        }
+
+        function getSavedHomeAddress() {
+            try {
+                const pin = state.techInfo ? state.techInfo.pin : '';
+                return localStorage.getItem('bsg_home_address_' + pin) || '';
+            } catch(e) { return ''; }
+        }
+
+        function saveHomeAddress() {
+            try {
+                const pin = state.techInfo ? state.techInfo.pin : '';
+                const addr = document.getElementById('shipToAddress').value.trim();
+                if (addr) {
+                    localStorage.setItem('bsg_home_address_' + pin, addr);
+                    document.getElementById('savedAddressLabel').style.display = 'inline';
+                    document.getElementById('savedAddressLabel').textContent = 'Address saved!';
+                    showToast('Address saved for future orders', 'success');
+                } else {
+                    showToast('Enter an address first', 'error');
+                }
+            } catch(e) { showToast('Could not save address', 'error'); }
+        }
+
+        function loadSavedAddress() {
+            const addr = getSavedHomeAddress();
+            if (addr) {
+                document.getElementById('shipToAddress').value = addr;
+                showToast('Saved address loaded', 'success');
             }
         }
 
