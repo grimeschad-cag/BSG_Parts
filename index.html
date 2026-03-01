@@ -57,13 +57,17 @@
         /* ===== LOGIN SCREEN ===== */
         .login-screen {
             flex: 1;
-            display: flex;
+            display: none;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             padding: var(--spacing-lg);
             background-color: var(--primary-black);
             color: var(--white);
+        }
+
+        .login-screen.active {
+            display: flex;
         }
 
         .login-container {
