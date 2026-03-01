@@ -1455,6 +1455,7 @@
                 items.push({
                     itemNumber: row.getAttribute('data-item-number'),
                     qtyFilled: totalFilled,
+                    newFilled: newFilled,
                     qtyBackordered,
                     lineStatus: status,
                     fillNotes: notes
@@ -1610,17 +1611,16 @@
 
             rows.forEach((row, idx) => {
                 const item = order.items[idx];
-                const qtyFilled = parseInt(row.querySelector('.qty-filled').value) || 0;
+                const newFilled = parseInt(row.querySelector('.qty-filled').value) || 0;
                 const qtyBackordered = parseInt(row.querySelector('.qty-backordered').value) || 0;
 
-                if (qtyFilled > 0) {
+                if (newFilled > 0) {
                     hasShipped = true;
                     shippedRows += `<tr>
                         <td style="padding:6px; border:1px solid #ccc;">${item.itemNumber}</td>
                         <td style="padding:6px; border:1px solid #ccc;">${item.description}</td>
                         <td style="padding:6px; border:1px solid #ccc;">${item.uom}</td>
-                        <td style="padding:6px; border:1px solid #ccc; text-align:center;">${item.qtyOrdered}</td>
-                        <td style="padding:6px; border:1px solid #ccc; text-align:center; font-weight:bold; color:#2e7d32;">${qtyFilled}</td>
+                        <td style="padding:6px; border:1px solid #ccc; text-align:center; font-weight:bold; color:#2e7d32;">${newFilled}</td>
                     </tr>`;
                 }
                 if (qtyBackordered > 0) {
@@ -1629,7 +1629,6 @@
                         <td style="padding:6px; border:1px solid #ccc;">${item.itemNumber}</td>
                         <td style="padding:6px; border:1px solid #ccc;">${item.description}</td>
                         <td style="padding:6px; border:1px solid #ccc;">${item.uom}</td>
-                        <td style="padding:6px; border:1px solid #ccc; text-align:center;">${item.qtyOrdered}</td>
                         <td style="padding:6px; border:1px solid #ccc; text-align:center; font-weight:bold; color:#d32f2f;">${qtyBackordered}</td>
                     </tr>`;
                 }
@@ -1639,7 +1638,6 @@
                 <th style="padding:6px; border:1px solid #ccc;">Item #</th>
                 <th style="padding:6px; border:1px solid #ccc;">Description</th>
                 <th style="padding:6px; border:1px solid #ccc;">UOM</th>
-                <th style="padding:6px; border:1px solid #ccc;">Qty Ordered</th>
                 <th style="padding:6px; border:1px solid #ccc;">Qty</th>
             </tr></thead>`;
 
