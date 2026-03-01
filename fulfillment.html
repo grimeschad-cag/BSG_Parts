@@ -1626,6 +1626,9 @@
 
             rows.forEach((row, idx) => {
                 const item = order.items[idx];
+                // Skip items already fully filled from a previous session
+                if (item.status === 'Filled') return;
+
                 const newFilled = parseInt(row.querySelector('.qty-filled').value) || 0;
                 const qtyBackordered = parseInt(row.querySelector('.qty-backordered').value) || 0;
 
