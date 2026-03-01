@@ -765,14 +765,14 @@
             <img src="bsg_logo.png" alt="BSG Logo">
             <h1>BSG Parts</h1>
             <p>Admin Panel</p>
-            <form id="loginForm">
-                <div class="form-group">
-                    <label for="adminPIN">Admin PIN</label>
-                    <input type="password" id="adminPIN" placeholder="Enter your PIN" required>
-                    <div class="error-text" id="loginError" style="display: none;"></div>
-                </div>
-                <button type="submit" class="btn btn-primary">Login</button>
-            </form>
+            <div class="pin-input" id="adminPinInputContainer" style="display:flex;gap:10px;justify-content:center;margin-bottom:20px;">
+                <input type="text" maxlength="1" class="admin-pin-digit" inputmode="numeric" autocomplete="off" style="width:50px;height:50px;font-size:24px;text-align:center;border:2px solid #ddd;border-radius:8px;font-weight:bold;">
+                <input type="text" maxlength="1" class="admin-pin-digit" inputmode="numeric" autocomplete="off" style="width:50px;height:50px;font-size:24px;text-align:center;border:2px solid #ddd;border-radius:8px;font-weight:bold;">
+                <input type="text" maxlength="1" class="admin-pin-digit" inputmode="numeric" autocomplete="off" style="width:50px;height:50px;font-size:24px;text-align:center;border:2px solid #ddd;border-radius:8px;font-weight:bold;">
+                <input type="text" maxlength="1" class="admin-pin-digit" inputmode="numeric" autocomplete="off" style="width:50px;height:50px;font-size:24px;text-align:center;border:2px solid #ddd;border-radius:8px;font-weight:bold;">
+            </div>
+            <div class="error-text" id="loginError" style="display: none; color: #d32f2f; margin-bottom: 10px;"></div>
+            <button class="btn btn-primary" id="adminLoginBtn" style="width:100%;">Login</button>
         </div>
     </div>
 
@@ -813,6 +813,10 @@
                                 <div class="error-text" id="pinError" style="display: none;"></div>
                             </div>
                             <div class="form-field">
+                                <label for="techRTE">RTE#</label>
+                                <input type="text" id="techRTE" placeholder="Route number">
+                            </div>
+                            <div class="form-field">
                                 <label for="techEmail">Email</label>
                                 <input type="email" id="techEmail" placeholder="Email address">
                             </div>
@@ -829,6 +833,7 @@
                             <tr>
                                 <th>Name</th>
                                 <th>PIN</th>
+                                <th>RTE#</th>
                                 <th>Email</th>
                                 <th>Status</th>
                                 <th>Actions</th>
@@ -836,7 +841,7 @@
                         </thead>
                         <tbody id="techniciansTableBody">
                             <tr>
-                                <td colspan="5" style="text-align: center; padding: 20px; color: #999;">Loading technicians...</td>
+                                <td colspan="6" style="text-align: center; padding: 20px; color: #999;">Loading technicians...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -996,17 +1001,51 @@
         let config = {};
 
         // ============ LOGIN ============
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const pin = document.getElementById('adminPIN').value;
-            const errorEl = document.getElementById('loginError');
+        (function setupAdminPinInput() {
+            const inputs = document.querySelectorAll('.admin-pin-digit');
+            inputs.forEach((input, index) => {
+                input.addEventListener('keyup', (e) => {
+                    if (e.key === 'Backspace') {
+                        input.value = '';
+                        if (index > 0) inputs[index - 1].focus();
+                    } else if (/^\d$/.test(input.value)) {
+                        if (index < inputs.length - 1) inputs[index + 1].focus();
+                    } else {
+                        input.value = '';
+                    }
+                });
+                input.addEventListener('paste', (e) => {
+                    e.preventDefault();
+                    const pastedData = e.clipboardData.getData('text');
+                    if (/^\d{4}$/.test(pastedData)) {
+                        pastedData.split('').forEach((digit, i) => { if (i < inputs.length) inputs[i].value = digit; });
+                    }
+                });
+                input.addEventListener('keypress', (e) => { if (e.key === 'Enter') adminLogin(); });
+            });
+        })();
 
+        function getAdminPinValue() {
+            return Array.from(document.querySelectorAll('.admin-pin-digit')).map(i => i.value).join('');
+        }
+
+        document.getElementById('adminLoginBtn').addEventListener('click', adminLogin);
+
+        async function adminLogin() {
+            const pin = getAdminPinValue();
+            const errorEl = document.getElementById('loginError');
             errorEl.style.display = 'none';
+
+            if (pin.length !== 4) {
+                errorEl.textContent = 'Please enter a 4-digit PIN';
+                errorEl.style.display = 'block';
+                return;
+            }
 
             try {
                 const response = await fetch(API_URL, {
                     method: 'POST',
-                    body: (() => { const fd = new FormData(); fd.append('action', 'verifyAdminPIN'); fd.append('pin', pin); return fd; })()
+                    body: JSON.stringify({ action: 'verifyAdminPIN', pin: pin })
                 });
 
                 const data = await response.json();
@@ -1017,13 +1056,16 @@
                 } else {
                     errorEl.textContent = 'Invalid PIN';
                     errorEl.style.display = 'block';
+                    document.querySelectorAll('.admin-pin-digit').forEach(input => { input.value = ''; input.style.borderColor = '#d32f2f'; });
+                    setTimeout(() => document.querySelectorAll('.admin-pin-digit').forEach(input => input.style.borderColor = '#ddd'), 500);
+                    document.querySelector('.admin-pin-digit').focus();
                 }
             } catch (err) {
                 console.error('Login error:', err);
                 errorEl.textContent = 'Error verifying PIN. Please try again.';
                 errorEl.style.display = 'block';
             }
-        });
+        }
 
         function showDashboard() {
             document.getElementById('loginScreen').style.display = 'none';
@@ -1038,8 +1080,8 @@
             config = {};
             document.getElementById('loginScreen').style.display = 'flex';
             document.getElementById('dashboard').style.display = 'none';
-            document.getElementById('adminPIN').value = '';
-            document.getElementById('loginForm').reset();
+            document.querySelectorAll('.admin-pin-digit').forEach(input => input.value = '');
+            document.getElementById('loginError').style.display = 'none';
         }
 
         // ============ TAB SWITCHING ============
@@ -1085,6 +1127,7 @@
                 <tr>
                     <td>${tech.Name || ''}</td>
                     <td><code style="background: #f0f0f0; padding: 2px 6px; border-radius: 2px; font-family: monospace;">${tech.PIN || ''}</code></td>
+                    <td>${tech.RTE || ''}</td>
                     <td>${tech.Email || ''}</td>
                     <td>
                         <span class="status-badge ${isActive ? 'status-active' : 'status-inactive'}">
@@ -1118,6 +1161,7 @@
         function clearTechnicianForm() {
             document.getElementById('techName').value = '';
             document.getElementById('techPIN').value = '';
+            document.getElementById('techRTE').value = '';
             document.getElementById('techEmail').value = '';
             document.getElementById('pinError').style.display = 'none';
         }
@@ -1125,13 +1169,14 @@
         async function saveTechnician() {
             const name = document.getElementById('techName').value.trim();
             const pin = document.getElementById('techPIN').value.trim();
+            const rte = document.getElementById('techRTE').value.trim();
             const email = document.getElementById('techEmail').value.trim();
             const pinError = document.getElementById('pinError');
 
             pinError.style.display = 'none';
 
             if (!name || !pin || !email) {
-                showToast('Please fill in all fields', 'error');
+                showToast('Please fill in Name, PIN, and Email', 'error');
                 return;
             }
 
@@ -1142,13 +1187,10 @@
             }
 
             try {
-                const formData = new FormData();
-                formData.append('action', 'addTechnician');
-                formData.append('name', name);
-                formData.append('pin', pin);
-                formData.append('email', email);
-
-                const response = await fetch(API_URL, { method: 'POST', body: formData });
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'addTechnician', name, pin, rte, email })
+                });
                 const data = await response.json();
 
                 if (data.success) {
