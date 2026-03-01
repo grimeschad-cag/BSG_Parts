@@ -1,4 +1,4 @@
-const PARTS_CATALOG = [
+var PARTS_CATALOG = [
   {
     "itemNum": "0701000001M",
     "desc": "(X) STIR STICK HOLDER",
