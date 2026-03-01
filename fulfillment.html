@@ -1544,17 +1544,32 @@
             const order = appState.orders.find(o => o.orderId === orderId);
             if (!order) return;
 
-            const itemRows = order.items.map((item, i) => `
+            // Read remaining qty from the DOM backorder fields (reflects what's left to pick)
+            const card = document.querySelector(`[data-order-id="${orderId}"]`);
+            const domRows = card ? card.querySelectorAll('tbody tr') : [];
+
+            let rowNum = 0;
+            const itemRows = order.items.map((item, i) => {
+                // Use the DOM backorder value as the qty to pick (remaining), fallback to qtyOrdered - qtyFilled
+                let qtyToPick = (item.qtyOrdered || 0) - (item.qtyFilled || 0);
+                if (domRows[i]) {
+                    const boInput = domRows[i].querySelector('.qty-backordered');
+                    if (boInput) qtyToPick = parseInt(boInput.value) || 0;
+                }
+                // Skip fully filled items
+                if (qtyToPick <= 0) return '';
+                rowNum++;
+                return `
                 <tr>
-                    <td style="padding:8px; border:1px solid #ccc;">${i+1}</td>
+                    <td style="padding:8px; border:1px solid #ccc;">${rowNum}</td>
                     <td style="padding:8px; border:1px solid #ccc;">${item.itemNumber}</td>
                     <td style="padding:8px; border:1px solid #ccc;">${item.description}</td>
                     <td style="padding:8px; border:1px solid #ccc;">${item.vendor}</td>
                     <td style="padding:8px; border:1px solid #ccc;">${item.uom}</td>
-                    <td style="padding:8px; border:1px solid #ccc; text-align:center; font-weight:bold;">${item.qtyOrdered}</td>
+                    <td style="padding:8px; border:1px solid #ccc; text-align:center; font-weight:bold;">${qtyToPick}</td>
                     <td style="padding:8px; border:1px solid #ccc; text-align:center;">________</td>
-                </tr>
-            `).join('');
+                </tr>`;
+            }).join('');
 
             const html = `<html><head><title>Pick List - ${order.orderId}</title>
                 <style>body{font-family:Arial,sans-serif;padding:30px;color:#333}
@@ -1583,7 +1598,7 @@
                         <th style="padding:8px; border:1px solid #ccc;">Description</th>
                         <th style="padding:8px; border:1px solid #ccc;">Vendor</th>
                         <th style="padding:8px; border:1px solid #ccc;">UOM</th>
-                        <th style="padding:8px; border:1px solid #ccc;">Qty Ordered</th>
+                        <th style="padding:8px; border:1px solid #ccc;">Qty Needed</th>
                         <th style="padding:8px; border:1px solid #ccc;">Qty Picked</th>
                     </tr></thead>
                     <tbody>${itemRows}</tbody>
@@ -1720,7 +1735,10 @@
             // Refresh
             document.getElementById('refreshButton').addEventListener('click', loadOrders);
 
-            // Reports
+            // Reports — default dates to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('filledReportFrom').value = today;
+            document.getElementById('filledReportTo').value = today;
             document.getElementById('filledReportButton').addEventListener('click', downloadFilledReport);
             document.getElementById('backorderReportButton').addEventListener('click', downloadBackorderReport);
         });
