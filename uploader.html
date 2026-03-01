@@ -1002,7 +1002,7 @@
             try {
                 const response = await fetch(API_URL, {
                     method: 'POST',
-                    body: new FormData(Object.entries({ action: 'verifyAdminPIN', pin }).reduce((f, [k, v]) => { f.append(k, v); return f; }, new FormData()))
+                    body: (() => { const fd = new FormData(); fd.append('action', 'verifyAdminPIN'); fd.append('pin', pin); return fd; })()
                 });
 
                 const data = await response.json();
@@ -1052,7 +1052,7 @@
             try {
                 const response = await fetch(API_URL, {
                     method: 'POST',
-                    body: new FormData(Object.entries({ action: 'getTechnicians' }).reduce((f, [k, v]) => { f.append(k, v); return f; }, new FormData()))
+                    body: (() => { const fd = new FormData(); fd.append('action', 'getTechnicians'); return fd; })()
                 });
 
                 const data = await response.json();
@@ -1191,7 +1191,7 @@
             try {
                 const response = await fetch(API_URL, {
                     method: 'POST',
-                    body: new FormData(Object.entries({ action: 'getConfig' }).reduce((f, [k, v]) => { f.append(k, v); return f; }, new FormData()))
+                    body: (() => { const fd = new FormData(); fd.append('action', 'getConfig'); return fd; })()
                 });
 
                 const data = await response.json();
