@@ -968,10 +968,7 @@
                 </div>
                 <div class="report-card">
                     <h3>Backorder Report</h3>
-                    <div class="report-date-range">
-                        <input type="date" id="backorderReportFrom" placeholder="From">
-                        <input type="date" id="backorderReportTo" placeholder="To">
-                    </div>
+                    <p style="font-size: 13px; color: #666; margin-bottom: 15px;">All current backordered items</p>
                     <button class="report-button" id="backorderReportButton">Download Excel</button>
                 </div>
             </div>
@@ -1252,6 +1249,7 @@
                                     <th>Vendor</th>
                                     <th>UOM</th>
                                     <th>Qty Ordered</th>
+                                    <th>Remaining</th>
                                     <th>Qty Filled</th>
                                     <th>Qty Backordered</th>
                                     <th>Status</th>
@@ -1259,13 +1257,17 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                ${order.items.map((item, itemIndex) => `
-                                    <tr data-item-index="${itemIndex}" data-item-number="${item.itemNumber}">
+                                ${order.items.map((item, itemIndex) => {
+                                    const remaining = (item.qtyOrdered || 0) - (item.qtyFilled || 0);
+                                    const isComplete = item.status === 'Filled';
+                                    return `
+                                    <tr data-item-index="${itemIndex}" data-item-number="${item.itemNumber}" style="${isComplete ? 'opacity: 0.5; background: #f0fff0;' : ''}">
                                         <td><strong>${item.description}</strong></td>
                                         <td>${item.itemNumber}</td>
                                         <td>${item.vendor}</td>
                                         <td>${item.uom}</td>
                                         <td><strong>${item.qtyOrdered}</strong></td>
+                                        <td><strong style="color: ${remaining > 0 ? '#d32f2f' : '#4caf50'}">${remaining}</strong></td>
                                         <td>
                                             <input type="number" min="0" value="${item.qtyFilled || 0}"
                                                 onchange="updateLineStatus('${order.orderId}', ${itemIndex})"
@@ -1288,8 +1290,8 @@
                                         <td>
                                             <textarea class="line-notes" placeholder="Notes">${item.notes || ''}</textarea>
                                         </td>
-                                    </tr>
-                                `).join('')}
+                                    </tr>`;
+                                }).join('')}
                             </tbody>
                         </table>
 
@@ -1448,31 +1450,24 @@
             }
 
             const result = await apiCall('getFilledReport', {
-                dateFrom: fromDate,
-                dateTo: toDate
+                startDate: fromDate,
+                endDate: toDate
             });
 
-            if (result && result.data) {
-                generateExcel(result.data, 'Filled_Items_Report.xlsx');
+            if (result && result.filledItems && result.filledItems.length > 0) {
+                generateExcel(result.filledItems, 'Filled_Items_Report.xlsx');
+            } else {
+                showToast('No filled items found for this date range', 'info');
             }
         }
 
         async function downloadBackorderReport() {
-            const fromDate = document.getElementById('backorderReportFrom').value;
-            const toDate = document.getElementById('backorderReportTo').value;
+            const result = await apiCall('getBackorderReport', {});
 
-            if (!fromDate || !toDate) {
-                showToast('Please select both from and to dates', 'error');
-                return;
-            }
-
-            const result = await apiCall('getBackorderReport', {
-                dateFrom: fromDate,
-                dateTo: toDate
-            });
-
-            if (result && result.data) {
-                generateExcel(result.data, 'Backorder_Report.xlsx');
+            if (result && result.backorders && result.backorders.length > 0) {
+                generateExcel(result.backorders, 'Backorder_Report.xlsx');
+            } else {
+                showToast('No backordered items found', 'info');
             }
         }
 
