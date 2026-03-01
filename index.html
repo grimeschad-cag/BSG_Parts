@@ -101,53 +101,35 @@
             margin-bottom: var(--spacing-xl);
         }
 
-        .pin-input {
-            width: 100%;
-            font-size: var(--font-size-2xl);
-            padding: var(--spacing-md);
+        .pin-boxes {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .pin-boxes input {
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            text-align: center;
             border: 2px solid var(--border-color);
             border-radius: 8px;
-            text-align: center;
-            letter-spacing: 12px;
+            font-weight: bold;
+            letter-spacing: 2px;
             background-color: var(--white);
             color: var(--primary-black);
-            margin-bottom: var(--spacing-md);
-            font-weight: 600;
-            min-height: var(--min-touch-target);
         }
 
-        .pin-input::placeholder {
-            letter-spacing: normal;
+        .pin-boxes input:focus {
+            outline: none;
+            border-color: var(--accent-green);
+            background-color: #f9f9f9;
         }
 
-        .numeric-keypad {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: var(--spacing-sm);
-            margin-bottom: var(--spacing-lg);
-        }
-
-        .keypad-btn {
-            aspect-ratio: 1;
-            min-height: var(--min-touch-target);
-            background-color: var(--light-gray);
-            border: none;
-            border-radius: 8px;
-            font-size: var(--font-size-xl);
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .keypad-btn:active {
-            background-color: var(--medium-gray);
-            transform: scale(0.95);
-        }
-
-        .keypad-btn.delete {
-            background-color: var(--accent-red);
-            color: var(--white);
-            font-size: var(--font-size-sm);
+        .pin-boxes input.error {
+            border-color: var(--accent-red);
+            background-color: #ffebee;
         }
 
         .sign-in-btn {
@@ -938,32 +920,16 @@
             <p>Technician Ordering System</p>
 
             <div class="pin-input-group">
-                <input
-                    type="password"
-                    id="pinInput"
-                    class="pin-input"
-                    placeholder="••••"
-                    inputmode="numeric"
-                    maxlength="6"
-                    autocomplete="off"
-                >
-
-                <div class="numeric-keypad">
-                    <button class="keypad-btn" data-key="1">1</button>
-                    <button class="keypad-btn" data-key="2">2</button>
-                    <button class="keypad-btn" data-key="3">3</button>
-                    <button class="keypad-btn" data-key="4">4</button>
-                    <button class="keypad-btn" data-key="5">5</button>
-                    <button class="keypad-btn" data-key="6">6</button>
-                    <button class="keypad-btn" data-key="7">7</button>
-                    <button class="keypad-btn" data-key="8">8</button>
-                    <button class="keypad-btn" data-key="9">9</button>
-                    <button class="keypad-btn" data-key="0">0</button>
-                    <button class="keypad-btn delete" id="deleteBtn">Delete</button>
+                <div class="pin-boxes" id="pinBoxes">
+                    <input type="text" maxlength="1" class="pin-digit" inputmode="numeric" autocomplete="off">
+                    <input type="text" maxlength="1" class="pin-digit" inputmode="numeric" autocomplete="off">
+                    <input type="text" maxlength="1" class="pin-digit" inputmode="numeric" autocomplete="off">
+                    <input type="text" maxlength="1" class="pin-digit" inputmode="numeric" autocomplete="off">
                 </div>
+                <div id="pinError" class="text-error" style="margin-bottom: 12px;"></div>
             </div>
 
-            <button id="signInBtn" class="sign-in-btn" disabled>Sign In</button>
+            <button id="signInBtn" class="sign-in-btn">Sign In</button>
 
             <div class="login-footer">
                 <p>Are you on the Parts Team?</p>
@@ -1128,11 +1094,9 @@
         // ===== DOM ELEMENTS =====
         const loginScreen = document.getElementById('loginScreen');
         const mainScreen = document.getElementById('mainScreen');
-        const pinInput = document.getElementById('pinInput');
+        const pinDigits = document.querySelectorAll('.pin-digit');
         const signInBtn = document.getElementById('signInBtn');
         const logoutBtn = document.getElementById('logoutBtn');
-        const deleteBtn = document.getElementById('deleteBtn');
-        const keypadBtns = document.querySelectorAll('.keypad-btn:not(.delete)');
         const searchInput = document.getElementById('searchInput');
         const searchResults = document.getElementById('searchResults');
         const cartCount = document.getElementById('cartCount');
@@ -1168,13 +1132,8 @@
         }
 
         function attachEventListeners() {
-            // Keypad
-            keypadBtns.forEach(btn => {
-                btn.addEventListener('click', handleKeypadInput);
-            });
-            deleteBtn.addEventListener('click', handleDelete);
-            pinInput.addEventListener('input', updateSignInButton);
-            pinInput.addEventListener('keydown', handlePinKeydown);
+            // PIN digit boxes
+            setupPinBoxes();
 
             // Sign in
             signInBtn.addEventListener('click', handleSignIn);
@@ -1225,37 +1184,45 @@
         }
 
         // ===== LOGIN FLOW =====
-        function handleKeypadInput(e) {
-            const key = e.target.dataset.key;
-            const current = pinInput.value;
-            if (current.length < 6) {
-                pinInput.value = current + key;
-                pinInput.focus();
-                updateSignInButton();
-            }
+        function setupPinBoxes() {
+            pinDigits.forEach((input, index) => {
+                input.addEventListener('keyup', (e) => {
+                    if (e.key === 'Backspace') {
+                        input.value = '';
+                        if (index > 0) pinDigits[index - 1].focus();
+                    } else if (/^\d$/.test(input.value)) {
+                        if (index < pinDigits.length - 1) {
+                            pinDigits[index + 1].focus();
+                        }
+                    } else {
+                        input.value = '';
+                    }
+                });
+                input.addEventListener('paste', (e) => {
+                    e.preventDefault();
+                    const pastedData = e.clipboardData.getData('text');
+                    if (/^\d{4}$/.test(pastedData)) {
+                        pastedData.split('').forEach((digit, i) => {
+                            if (i < pinDigits.length) pinDigits[i].value = digit;
+                        });
+                    }
+                });
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') handleSignIn();
+                });
+            });
         }
 
-        function handleDelete() {
-            pinInput.value = pinInput.value.slice(0, -1);
-            updateSignInButton();
-        }
-
-        function handlePinKeydown(e) {
-            if (e.key === 'Enter' && pinInput.value.length >= 4) {
-                handleSignIn();
-            } else if (e.key === 'Backspace') {
-                e.preventDefault();
-                handleDelete();
-            }
-        }
-
-        function updateSignInButton() {
-            signInBtn.disabled = pinInput.value.length < 4;
+        function getPinValue() {
+            return Array.from(pinDigits).map(input => input.value).join('');
         }
 
         async function handleSignIn() {
-            const pin = pinInput.value;
-            if (pin.length < 4) return;
+            const pin = getPinValue();
+            if (pin.length < 4) {
+                document.getElementById('pinError').textContent = 'Please enter a 4-digit PIN';
+                return;
+            }
 
             showLoading(signInBtn);
             try {
@@ -1269,9 +1236,10 @@
                     showMainScreen();
                     showToast(`Welcome, ${result.data.name}!`, 'success');
                 } else {
-                    showToast(result.error || 'Invalid PIN', 'error');
-                    pinInput.value = '';
-                    updateSignInButton();
+                    document.getElementById('pinError').textContent = result.error || 'Invalid PIN';
+                    pinDigits.forEach(input => { input.value = ''; input.classList.add('error'); });
+                    setTimeout(() => pinDigits.forEach(input => input.classList.remove('error')), 500);
+                    pinDigits[0].focus();
                 }
             } catch (error) {
                 showToast('Error verifying PIN. Check your connection.', 'error');
@@ -1286,12 +1254,12 @@
             state.techInfo = null;
             state.cart = [];
             clearSessionState();
-            pinInput.value = '';
+            pinDigits.forEach(input => input.value = '');
             accountField.value = '';
             notesField.value = '';
             searchInput.value = '';
             searchResults.innerHTML = '<p class="text-center no-results">Enter search terms to find parts</p>';
-            updateSignInButton();
+            document.getElementById('pinError').textContent = '';
             showLoginScreen();
             showToast('You have been logged out', 'success');
         }
@@ -1306,7 +1274,7 @@
             loginScreen.classList.remove('active');
             mainScreen.classList.add('active');
             if (state.techInfo) {
-                techNameEl.textContent = state.techInfo.name;
+                techNameEl.textContent = state.techInfo.name + (state.techInfo.rte ? ' | RTE# ' + state.techInfo.rte : '');
             }
             loadCart();
         }
