@@ -440,12 +440,14 @@
 
         .expanded-header-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            grid-template-columns: repeat(4, 1fr);
             gap: 15px;
         }
 
         .expanded-header-item {
             font-size: 13px;
+            min-width: 0;
+            overflow: hidden;
         }
 
         .expanded-header-label {
@@ -459,6 +461,8 @@
             color: #1a1a1a;
             font-weight: 500;
             margin-top: 3px;
+            word-break: break-all;
+            overflow-wrap: break-word;
         }
 
         .order-notes {
@@ -1064,9 +1068,9 @@
                     vendor: i.VendorName || i.vendor || '',
                     vendorItemNum: i.VendorItemNum || i.vendorItemNum || '',
                     uom: i.UOM || i.uom,
-                    qtyOrdered: i.QtyOrdered || i.qtyOrdered,
-                    qtyFilled: i.QtyFilled || i.qtyFilled || 0,
-                    qtyBackordered: i.QtyBackordered || i.qtyBackordered || 0,
+                    qtyOrdered: parseInt(i.QtyOrdered ?? i.qtyOrdered) || 0,
+                    qtyFilled: parseInt(i.QtyFilled ?? i.qtyFilled) || 0,
+                    qtyBackordered: parseInt(i.QtyBackordered ?? i.qtyBackordered) || 0,
                     status: i.LineStatus || i.status || 'Pending',
                     fillDate: i.FillDate || i.fillDate || '',
                     notes: i.FillNotes || i.notes || '',
@@ -1282,7 +1286,7 @@
                                     const remaining = (item.qtyOrdered || 0) - (item.qtyFilled || 0);
                                     const isComplete = item.status === 'Filled';
                                     return `
-                                    <tr data-item-index="${itemIndex}" data-item-number="${item.itemNumber}" style="${isComplete ? 'opacity: 0.5; background: #f0fff0;' : ''}">
+                                    <tr data-item-index="${itemIndex}" data-item-number="${item.itemNumber}" data-prev-filled="${item.qtyFilled || 0}" style="${isComplete ? 'opacity: 0.5; background: #f0fff0;' : ''}">
                                         <td><strong>${item.description}</strong></td>
                                         <td>${item.itemNumber}</td>
                                         <td>${item.vendor}</td>
@@ -1319,7 +1323,7 @@
                         <div class="action-buttons">
                             <button class="action-button primary" onclick="saveAndNotify('${order.orderId}')">Save & Notify Tech</button>
                             <button class="action-button secondary" onclick="saveDraft('${order.orderId}')">Save Draft</button>
-                            <button class="action-button secondary" onclick="printPackingList('${order.orderId}')" style="background:#1976d2; color:white;">Print Packing List</button>
+                            <button class="action-button secondary" onclick="printPackingList('${order.orderId}')" style="background:#1976d2; color:white;">Print Pick List</button>
                             <button class="action-button secondary" onclick="printPackingSlip('${order.orderId}')" style="background:#388e3c; color:white;">Print Packing Slip</button>
                         </div>
                     </div>
@@ -1332,27 +1336,28 @@
             const wasExpanded = card.classList.contains('expanded');
             card.classList.toggle('expanded');
 
-            // When opening a backordered/partial order, set up fields for remaining fill
+            // Pause auto-refresh while an order is expanded
             if (!wasExpanded) {
+                stopAutoRefresh();
+
+                // When opening a backordered/partial order, clear filled inputs for unfilled items
                 const order = appState.orders.find(o => o.orderId === orderId);
-                if (order && (order.status === 'Backordered' || order.status === 'Partial' || order.status === 'Open')) {
+                if (order && (order.status === 'Backordered' || order.status === 'Partial' || order.status === 'Open' || order.status === 'Pending')) {
                     const rows = card.querySelectorAll('tbody tr');
                     rows.forEach((row, idx) => {
                         const item = order.items[idx];
                         if (item && item.status !== 'Filled') {
                             const prevFilled = parseInt(item.qtyFilled) || 0;
                             const remaining = (item.qtyOrdered || 0) - prevFilled;
-                            // Store the previously filled amount so updateLineStatus can use it
                             row.dataset.prevFilled = prevFilled;
-                            // Clear the input to 0 so user enters NEW qty being filled now
                             row.querySelector('.qty-filled').value = 0;
                             row.querySelector('.qty-backordered').value = remaining;
-                        } else if (item && item.status === 'Filled') {
-                            // Already complete — show actual values, no prev tracking needed
-                            row.dataset.prevFilled = item.qtyFilled || 0;
                         }
                     });
                 }
+            } else {
+                // Collapsed — resume auto-refresh
+                startAutoRefresh();
             }
         }
 
@@ -1365,13 +1370,13 @@
             const newFilled = parseInt(row.querySelector('.qty-filled').value) || 0;
             const prevFilled = parseInt(row.dataset.prevFilled) || 0;
             const totalFilled = prevFilled + newFilled;
-            const qtyOrdered = item.qtyOrdered;
+            const qtyOrdered = parseInt(item.qtyOrdered) || 0;
             const remaining = qtyOrdered - prevFilled;
             const errorEl = document.getElementById(`error-${orderId}-${itemIndex}`);
 
             // Validation — can't fill more than what remains
             if (newFilled > remaining) {
-                errorEl.textContent = `Exceeds remaining (${remaining})`;
+                errorEl.textContent = `Cannot exceed remaining qty (${remaining})`;
                 return;
             } else {
                 errorEl.textContent = '';
@@ -1403,6 +1408,7 @@
 
             if (result && result.success) {
                 showToast('Order updated and tech notified', 'success');
+                startAutoRefresh();
                 loadOrders();
             } else {
                 showToast('Failed to update order', 'error');
@@ -1421,6 +1427,7 @@
 
             if (result && result.success) {
                 showToast('Order draft saved', 'success');
+                startAutoRefresh();
                 loadOrders();
             } else {
                 showToast('Failed to save draft', 'error');
@@ -1436,23 +1443,14 @@
 
             const rows = card.querySelectorAll('tbody tr');
             const items = [];
-            let hasError = false;
 
-            rows.forEach((row, index) => {
-                if (hasError) return;
+            rows.forEach((row) => {
                 const newFilled = parseInt(row.querySelector('.qty-filled').value) || 0;
                 const prevFilled = parseInt(row.dataset.prevFilled) || 0;
                 const totalFilled = prevFilled + newFilled;
                 const qtyBackordered = parseInt(row.querySelector('.qty-backordered').value) || 0;
                 const status = row.querySelector('.line-status').value;
                 const notes = row.querySelector('.line-notes').value;
-                const qtyOrdered = parseInt(row.querySelector('td:nth-child(5)').textContent);
-
-                if (totalFilled + qtyBackordered > qtyOrdered) {
-                    showToast(`Line ${index + 1}: Filled + Backordered exceeds ordered quantity`, 'error');
-                    hasError = true;
-                    return;
-                }
 
                 items.push({
                     itemNumber: row.getAttribute('data-item-number'),
@@ -1463,7 +1461,6 @@
                 });
             });
 
-            if (hasError) return null;
             return { items };
         }
 
@@ -1558,14 +1555,14 @@
                 </tr>
             `).join('');
 
-            const html = `<html><head><title>Packing List - ${order.orderId}</title>
+            const html = `<html><head><title>Pick List - ${order.orderId}</title>
                 <style>body{font-family:Arial,sans-serif;padding:30px;color:#333}
                 table{border-collapse:collapse;width:100%}
                 h1{font-size:20px;margin-bottom:5px}
                 .header-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:20px;font-size:13px}
                 .header-grid strong{display:inline-block;width:100px}
                 @media print{body{padding:15px}}</style></head><body>
-                <h1>BSG Parts — Packing List</h1>
+                <h1>BSG Parts — Pick List</h1>
                 <hr style="margin-bottom:15px">
                 <div class="header-grid">
                     <div><strong>Order #:</strong> ${order.orderId}</div>
