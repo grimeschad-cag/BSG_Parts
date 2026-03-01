@@ -977,6 +977,13 @@
                     <p style="font-size: 13px; color: #666; margin-bottom: 15px;">All current backordered items</p>
                     <button class="report-button" id="backorderReportButton">Download Excel</button>
                 </div>
+                <div class="report-card">
+                    <h3>Print All Pick Lists</h3>
+                    <label style="font-size: 13px; color: #666; display:flex; align-items:center; gap:6px; margin-bottom:15px; cursor:pointer;">
+                        <input type="checkbox" id="includePartialOrders" checked> Include partial orders
+                    </label>
+                    <button class="report-button" id="printAllPickListButton" style="background:#1976d2;">Print Pick Lists</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1695,6 +1702,103 @@
             win.document.close();
         }
 
+        // ===== PRINT ALL PICK LISTS =====
+        async function printAllPickLists() {
+            const includePartial = document.getElementById('includePartialOrders').checked;
+
+            // Fetch all orders fresh (no status filter so we get Open + Partial + Backordered)
+            const result = await apiCall('getAllOrders', {});
+            if (!result || !result.orders) {
+                showToast('Failed to load orders', 'error');
+                return;
+            }
+
+            const allOrders = normalizeOrders(result.orders);
+            const validStatuses = ['Open', 'Pending'];
+            if (includePartial) {
+                validStatuses.push('Partial', 'Backordered');
+            }
+
+            const orders = allOrders.filter(o => validStatuses.includes(o.status));
+
+            if (orders.length === 0) {
+                showToast('No open orders to print', 'info');
+                return;
+            }
+
+            // Build one big printable page with all orders
+            let orderPages = '';
+            orders.forEach((order, orderIdx) => {
+                let rowNum = 0;
+                const itemRows = order.items.map(item => {
+                    const remaining = (item.qtyOrdered || 0) - (item.qtyFilled || 0);
+                    if (remaining <= 0) return '';
+                    rowNum++;
+                    return '<tr>' +
+                        '<td style="padding:6px; border:1px solid #ccc;">' + rowNum + '</td>' +
+                        '<td style="padding:6px; border:1px solid #ccc;">' + item.itemNumber + '</td>' +
+                        '<td style="padding:6px; border:1px solid #ccc;">' + item.description + '</td>' +
+                        '<td style="padding:6px; border:1px solid #ccc;">' + item.vendor + '</td>' +
+                        '<td style="padding:6px; border:1px solid #ccc;">' + item.uom + '</td>' +
+                        '<td style="padding:6px; border:1px solid #ccc; text-align:center; font-weight:bold;">' + remaining + '</td>' +
+                        '<td style="padding:6px; border:1px solid #ccc; text-align:center;">________</td>' +
+                        '</tr>';
+                }).join('');
+
+                if (rowNum === 0) return; // all items filled, skip
+
+                orderPages += (orderIdx > 0 ? '<div style="page-break-before:always;"></div>' : '') +
+                    '<div class="order-block">' +
+                    '<h1>BSG Parts — Pick List</h1>' +
+                    '<hr style="margin-bottom:12px">' +
+                    '<div class="header-grid">' +
+                        '<div><strong>Order #:</strong> ' + order.orderId + '</div>' +
+                        '<div><strong>Date:</strong> ' + formatDate(order.orderDate) + '</div>' +
+                        '<div><strong>Tech:</strong> ' + order.techName + '</div>' +
+                        '<div><strong>RTE#:</strong> ' + (order.techRTE || 'N/A') + '</div>' +
+                        '<div><strong>Account:</strong> ' + order.accountName + '</div>' +
+                        '<div><strong>Urgency:</strong> ' + order.urgency + '</div>' +
+                        '<div><strong>Shipping:</strong> ' + (order.shipping || 'Scheduled Delivery') + '</div>' +
+                        (order.shipToAddress ? '<div><strong>Ship To:</strong> ' + order.shipToAddress + '</div>' : '') +
+                        (order.notes ? '<div style="grid-column:1/3"><strong>Notes:</strong> ' + order.notes + '</div>' : '') +
+                    '</div>' +
+                    '<table><thead><tr style="background:#1a1a1a; color:white;">' +
+                        '<th style="padding:6px; border:1px solid #ccc;">#</th>' +
+                        '<th style="padding:6px; border:1px solid #ccc;">Item #</th>' +
+                        '<th style="padding:6px; border:1px solid #ccc;">Description</th>' +
+                        '<th style="padding:6px; border:1px solid #ccc;">Vendor</th>' +
+                        '<th style="padding:6px; border:1px solid #ccc;">UOM</th>' +
+                        '<th style="padding:6px; border:1px solid #ccc;">Qty Needed</th>' +
+                        '<th style="padding:6px; border:1px solid #ccc;">Qty Picked</th>' +
+                    '</tr></thead><tbody>' + itemRows + '</tbody></table>' +
+                    '<div style="margin-top:15px;font-size:11px;color:#999;">Status: ' + order.status + '</div>' +
+                    '</div>';
+            });
+
+            if (!orderPages) {
+                showToast('No items to pick', 'info');
+                return;
+            }
+
+            const html = '<html><head><title>All Pick Lists</title>' +
+                '<style>body{font-family:Arial,sans-serif;padding:30px;color:#333}' +
+                'table{border-collapse:collapse;width:100%}' +
+                'h1{font-size:18px;margin-bottom:4px}' +
+                '.header-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:15px;font-size:12px}' +
+                '.header-grid strong{display:inline-block;width:90px}' +
+                '@media print{body{padding:10px} .order-block{page-break-inside:avoid}}</style></head><body>' +
+                '<div style="text-align:center;margin-bottom:20px;font-size:12px;color:#666;">' +
+                'Printed ' + new Date().toLocaleString() + ' — ' + orders.length + ' order(s)' +
+                (includePartial ? ' (including partial/backordered)' : ' (open only)') +
+                '</div>' +
+                orderPages +
+                '<scr' + 'ipt>window.print();<\/scr' + 'ipt></body></html>';
+
+            const win = window.open('', '_blank');
+            win.document.write(html);
+            win.document.close();
+        }
+
         // ===== AUTO-REFRESH =====
         function startAutoRefresh() {
             if (appState.autoRefreshInterval) {
@@ -1744,6 +1848,7 @@
             document.getElementById('filledReportTo').value = today;
             document.getElementById('filledReportButton').addEventListener('click', downloadFilledReport);
             document.getElementById('backorderReportButton').addEventListener('click', downloadBackorderReport);
+            document.getElementById('printAllPickListButton').addEventListener('click', printAllPickLists);
         });
     </script>
 </body>
