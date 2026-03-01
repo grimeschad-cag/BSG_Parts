@@ -1049,6 +1049,37 @@
             }
         }
 
+        // Normalize API response keys (uppercase from Google Sheets) to lowercase used in UI
+        function normalizeOrders(orders) {
+            if (!orders) return [];
+            return orders.map(o => ({
+                orderId: o.OrderID || o.orderId,
+                techName: o.TechName || o.techName,
+                techEmail: o.TechEmail || o.techEmail,
+                techPin: o.TechPIN || o.techPin,
+                accountName: o.Account || o.accountName,
+                urgency: o.Urgency || o.urgency,
+                shipping: o.Shipping || o.shipping || 'Scheduled Delivery',
+                shipToAddress: o.ShipToAddress || o.shipToAddress || '',
+                notes: o.Notes || o.notes,
+                orderDate: o.OrderDate || o.orderDate,
+                status: o.Status || o.status,
+                items: (o.items || []).map(i => ({
+                    itemNumber: i.ItemNumber || i.itemNumber,
+                    description: i.ItemDescription || i.description,
+                    vendor: i.VendorName || i.vendor || '',
+                    vendorItemNum: i.VendorItemNum || i.vendorItemNum || '',
+                    uom: i.UOM || i.uom,
+                    qtyOrdered: i.QtyOrdered || i.qtyOrdered,
+                    qtyFilled: i.QtyFilled || i.qtyFilled || 0,
+                    qtyBackordered: i.QtyBackordered || i.qtyBackordered || 0,
+                    status: i.LineStatus || i.status || 'Pending',
+                    fillDate: i.FillDate || i.fillDate || '',
+                    notes: i.FillNotes || i.notes || '',
+                }))
+            }));
+        }
+
         function formatDate(dateString) {
             if (!dateString) return '';
             const date = new Date(dateString);
@@ -1126,7 +1157,7 @@
             const result = await apiCall('getAllOrders', filterParams);
 
             if (result && result.orders) {
-                appState.orders = result.orders;
+                appState.orders = normalizeOrders(result.orders);
                 renderOrders();
                 updateRushBadge();
             }
@@ -1134,10 +1165,12 @@
         }
 
         function updateRushBadge() {
-            const rushCount = appState.orders.filter(o => o.urgency === 'Rush').length;
+            const rushCount = appState.orders.filter(o =>
+                o.urgency === 'Rush' || o.urgency === 'nextday' || o.urgency === 'Next Day Air'
+            ).length;
             const badge = document.getElementById('rushBadgeContainer');
             if (rushCount > 0) {
-                badge.innerHTML = `<span class="rush-badge">🔴 Rush Orders: ${rushCount}</span>`;
+                badge.innerHTML = `<span class="rush-badge">🔴 Next Day Air Orders: ${rushCount}</span>`;
             } else {
                 badge.innerHTML = '';
             }
@@ -1152,13 +1185,13 @@
             }
 
             container.innerHTML = appState.orders.map((order, index) => `
-                <div class="order-card ${order.urgency === 'Rush' ? 'rush' : ''}" data-order-id="${order.orderId}" data-order-index="${index}">
+                <div class="order-card ${(order.urgency === 'Rush' || order.urgency === 'nextday' || order.urgency === 'Next Day Air') ? 'rush' : ''}" data-order-id="${order.orderId}" data-order-index="${index}">
                     <div class="order-summary" onclick="toggleOrderExpanded('${order.orderId}')">
                         <div class="order-info">
                             <div class="order-header-row">
                                 <span class="order-id">Order #${order.orderId}</span>
                                 <span class="badge ${order.status.toLowerCase()}">${order.status}</span>
-                                ${order.urgency === 'Rush' ? '<span class="badge urgent">RUSH</span>' : ''}
+                                ${(order.urgency === 'Rush' || order.urgency === 'nextday' || order.urgency === 'Next Day Air') ? '<span class="badge urgent">NEXT DAY AIR</span>' : ''}
                             </div>
                             <div class="order-details-row">
                                 <span><strong>Tech:</strong> ${order.techName}</span>
@@ -1197,6 +1230,10 @@
                                     <div class="expanded-header-label">Order Date</div>
                                     <div class="expanded-header-value">${formatDate(order.orderDate)}</div>
                                 </div>
+                                <div class="expanded-header-item">
+                                    <div class="expanded-header-label">Shipping</div>
+                                    <div class="expanded-header-value">${order.shipping || 'Scheduled Delivery'}${order.shipToAddress ? '<br><small>' + order.shipToAddress + '</small>' : ''}</div>
+                                </div>
                             </div>
                         </div>
 
@@ -1223,7 +1260,7 @@
                             </thead>
                             <tbody>
                                 ${order.items.map((item, itemIndex) => `
-                                    <tr data-item-index="${itemIndex}">
+                                    <tr data-item-index="${itemIndex}" data-item-number="${item.itemNumber}">
                                         <td><strong>${item.description}</strong></td>
                                         <td>${item.itemNumber}</td>
                                         <td>${item.vendor}</td>
@@ -1361,11 +1398,11 @@
                 }
 
                 items.push({
-                    itemIndex: index,
+                    itemNumber: row.getAttribute('data-item-number'),
                     qtyFilled,
                     qtyBackordered,
-                    status,
-                    notes
+                    lineStatus: status,
+                    fillNotes: notes
                 });
             });
 
@@ -1376,9 +1413,9 @@
         function applyFilters() {
             appState.currentFilters = {
                 status: document.getElementById('statusFilter').value,
-                techName: document.getElementById('techFilter').value,
-                dateFrom: document.getElementById('dateFromFilter').value,
-                dateTo: document.getElementById('dateToFilter').value,
+                tech: document.getElementById('techFilter').value,
+                startDate: document.getElementById('dateFromFilter').value,
+                endDate: document.getElementById('dateToFilter').value,
                 urgency: document.getElementById('urgencyFilter').value
             };
             loadOrders();
@@ -1392,9 +1429,9 @@
             document.getElementById('urgencyFilter').value = '';
             appState.currentFilters = {
                 status: '',
-                techName: '',
-                dateFrom: '',
-                dateTo: '',
+                tech: '',
+                startDate: '',
+                endDate: '',
                 urgency: ''
             };
             loadOrders();
