@@ -909,6 +909,8 @@
                     <label for="statusFilter">Status</label>
                     <select id="statusFilter">
                         <option value="">All</option>
+                        <option value="unfilled" selected>Unfilled (Open/Partial/Backordered)</option>
+                        <option value="Open">Open</option>
                         <option value="Pending">Pending</option>
                         <option value="Partial">Partial</option>
                         <option value="Filled">Filled</option>
@@ -987,13 +989,7 @@
         // ===== STATE =====
         let appState = {
             pinValid: false,
-            currentFilters: {
-                status: '',
-                techName: '',
-                dateFrom: '',
-                dateTo: '',
-                urgency: ''
-            },
+            currentFilters: {},
             orders: [],
             autoRefreshInterval: null
         };
@@ -1152,10 +1148,30 @@
         async function loadOrders(filters = null) {
             showLoading(true);
             const filterParams = filters || appState.currentFilters;
-            const result = await apiCall('getAllOrders', filterParams);
+
+            // Build API params — send specific status to backend, or nothing for "unfilled" (filter client-side)
+            const apiParams = {};
+            if (filterParams.status && filterParams.status !== 'unfilled') {
+                apiParams.status = filterParams.status;
+            }
+            if (filterParams.tech) apiParams.tech = filterParams.tech;
+            if (filterParams.startDate) apiParams.startDate = filterParams.startDate;
+            if (filterParams.endDate) apiParams.endDate = filterParams.endDate;
+            if (filterParams.urgency) apiParams.urgency = filterParams.urgency;
+
+            const result = await apiCall('getAllOrders', apiParams);
 
             if (result && result.orders) {
-                appState.orders = normalizeOrders(result.orders);
+                let orders = normalizeOrders(result.orders);
+
+                // Client-side filter for "unfilled" (Open, Partial, Backordered, Pending)
+                if (!filterParams.status || filterParams.status === 'unfilled') {
+                    orders = orders.filter(o =>
+                        o.status === 'Open' || o.status === 'Partial' || o.status === 'Backordered' || o.status === 'Pending'
+                    );
+                }
+
+                appState.orders = orders;
                 renderOrders();
                 updateRushBadge();
             }
@@ -1316,18 +1332,24 @@
             const wasExpanded = card.classList.contains('expanded');
             card.classList.toggle('expanded');
 
-            // When opening a backordered/partial order, clear the filled fields for unfilled items
+            // When opening a backordered/partial order, set up fields for remaining fill
             if (!wasExpanded) {
                 const order = appState.orders.find(o => o.orderId === orderId);
                 if (order && (order.status === 'Backordered' || order.status === 'Partial' || order.status === 'Open')) {
                     const rows = card.querySelectorAll('tbody tr');
                     rows.forEach((row, idx) => {
                         const item = order.items[idx];
-                        // Only clear filled for items that aren't already fully filled
                         if (item && item.status !== 'Filled') {
+                            const prevFilled = parseInt(item.qtyFilled) || 0;
+                            const remaining = (item.qtyOrdered || 0) - prevFilled;
+                            // Store the previously filled amount so updateLineStatus can use it
+                            row.dataset.prevFilled = prevFilled;
+                            // Clear the input to 0 so user enters NEW qty being filled now
                             row.querySelector('.qty-filled').value = 0;
-                            // Auto-calc backorder = ordered - 0 = ordered
-                            row.querySelector('.qty-backordered').value = item.qtyOrdered || 0;
+                            row.querySelector('.qty-backordered').value = remaining;
+                        } else if (item && item.status === 'Filled') {
+                            // Already complete — show actual values, no prev tracking needed
+                            row.dataset.prevFilled = item.qtyFilled || 0;
                         }
                     });
                 }
@@ -1340,28 +1362,31 @@
             const card = document.querySelector(`[data-order-id="${orderId}"]`);
             const row = card.querySelector(`tbody tr[data-item-index="${itemIndex}"]`);
 
-            const qtyFilled = parseInt(row.querySelector('.qty-filled').value) || 0;
+            const newFilled = parseInt(row.querySelector('.qty-filled').value) || 0;
+            const prevFilled = parseInt(row.dataset.prevFilled) || 0;
+            const totalFilled = prevFilled + newFilled;
             const qtyOrdered = item.qtyOrdered;
+            const remaining = qtyOrdered - prevFilled;
             const errorEl = document.getElementById(`error-${orderId}-${itemIndex}`);
 
-            // Validation
-            if (qtyFilled > qtyOrdered) {
-                errorEl.textContent = `Filled exceeds ordered (${qtyOrdered})`;
+            // Validation — can't fill more than what remains
+            if (newFilled > remaining) {
+                errorEl.textContent = `Exceeds remaining (${remaining})`;
                 return;
             } else {
                 errorEl.textContent = '';
             }
 
-            // Auto-calculate backorder = ordered - filled
-            const autoBackorder = qtyOrdered - qtyFilled;
+            // Auto-calculate backorder = ordered - total filled
+            const autoBackorder = qtyOrdered - totalFilled;
             row.querySelector('.qty-backordered').value = autoBackorder > 0 ? autoBackorder : 0;
 
-            // Auto-set status
-            if (qtyFilled === 0) {
+            // Auto-set status based on total filled
+            if (totalFilled === 0) {
                 row.querySelector('.line-status').value = 'Pending';
-            } else if (qtyFilled === qtyOrdered) {
+            } else if (totalFilled >= qtyOrdered) {
                 row.querySelector('.line-status').value = 'Filled';
-            } else if (qtyFilled > 0 && qtyFilled < qtyOrdered) {
+            } else if (totalFilled > 0 && totalFilled < qtyOrdered) {
                 row.querySelector('.line-status').value = 'Partial';
             }
         }
@@ -1411,28 +1436,34 @@
 
             const rows = card.querySelectorAll('tbody tr');
             const items = [];
+            let hasError = false;
 
             rows.forEach((row, index) => {
-                const qtyFilled = parseInt(row.querySelector('.qty-filled').value) || 0;
+                if (hasError) return;
+                const newFilled = parseInt(row.querySelector('.qty-filled').value) || 0;
+                const prevFilled = parseInt(row.dataset.prevFilled) || 0;
+                const totalFilled = prevFilled + newFilled;
                 const qtyBackordered = parseInt(row.querySelector('.qty-backordered').value) || 0;
                 const status = row.querySelector('.line-status').value;
                 const notes = row.querySelector('.line-notes').value;
                 const qtyOrdered = parseInt(row.querySelector('td:nth-child(5)').textContent);
 
-                if (qtyFilled + qtyBackordered > qtyOrdered) {
+                if (totalFilled + qtyBackordered > qtyOrdered) {
                     showToast(`Line ${index + 1}: Filled + Backordered exceeds ordered quantity`, 'error');
+                    hasError = true;
                     return;
                 }
 
                 items.push({
                     itemNumber: row.getAttribute('data-item-number'),
-                    qtyFilled,
+                    qtyFilled: totalFilled,
                     qtyBackordered,
                     lineStatus: status,
                     fillNotes: notes
                 });
             });
 
+            if (hasError) return null;
             return { items };
         }
 
@@ -1449,18 +1480,12 @@
         }
 
         function clearFilters() {
-            document.getElementById('statusFilter').value = '';
+            document.getElementById('statusFilter').value = 'unfilled';
             document.getElementById('techFilter').value = '';
             document.getElementById('dateFromFilter').value = '';
             document.getElementById('dateToFilter').value = '';
             document.getElementById('urgencyFilter').value = '';
-            appState.currentFilters = {
-                status: '',
-                tech: '',
-                startDate: '',
-                endDate: '',
-                urgency: ''
-            };
+            appState.currentFilters = { status: 'unfilled' };
             loadOrders();
         }
 
