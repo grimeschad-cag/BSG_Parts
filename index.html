@@ -1491,7 +1491,7 @@
                 const shippingLabels = { scheduled: 'Scheduled Delivery', ups: 'UPS', customer: 'Ship to Customer' };
                 const payload = {
                     action: 'placeOrder',
-                    techId: state.techInfo.id,
+                    techPin: state.techInfo.pin,
                     techEmail: state.techInfo.email,
                     account: accountField.value,
                     urgency: state.urgency,
@@ -1499,10 +1499,12 @@
                     shipToAddress: shipToAddress || '',
                     notes: notesField.value,
                     items: state.cart.map(item => ({
-                        itemNum: item.itemNum,
-                        desc: item.desc,
-                        qty: item.qty,
+                        itemNumber: item.itemNum,
+                        itemDescription: item.desc,
+                        vendorName: item.vendor || '',
+                        vendorItemNum: item.vendorItemNum || '',
                         uom: item.uom,
+                        qtyOrdered: item.qty,
                     })),
                 };
 
@@ -1514,7 +1516,7 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    showToast(`Order placed! ID: ${result.data.orderId}`, 'success');
+                    showToast(`Order placed! ID: ${result.orderId}`, 'success');
                     state.cart = [];
                     saveCart();
                     loadCart();
@@ -1545,11 +1547,11 @@
 
             showLoading(refreshOrdersBtn);
             try {
-                const response = await fetch(`${API_URL}?action=getOrdersByTech&techId=${encodeURIComponent(state.techInfo.id)}`);
+                const response = await fetch(`${API_URL}?action=getOrdersByTech&pin=${encodeURIComponent(state.techInfo.pin)}`);
                 const result = await response.json();
 
-                if (result.success && result.data.orders && result.data.orders.length > 0) {
-                    renderOrders(result.data.orders);
+                if (result.success && result.orders && result.orders.length > 0) {
+                    renderOrders(result.orders);
                 } else {
                     ordersList.innerHTML = '<p class="text-center no-results">No orders yet</p>';
                 }
