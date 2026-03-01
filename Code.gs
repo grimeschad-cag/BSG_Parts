@@ -24,10 +24,10 @@ function setupSheet() {
   if (!orders) {
     orders = ss.insertSheet("Orders");
   }
-  orders.getRange(1, 1, 1, 9).setValues([["OrderID", "TechName", "TechEmail", "TechPIN", "Account", "Urgency", "Notes", "OrderDate", "Status"]]);
-  orders.getRange(1, 1, 1, 9).setFontWeight("bold").setBackground("#1a1a1a").setFontColor("#ffffff");
+  orders.getRange(1, 1, 1, 11).setValues([["OrderID", "TechName", "TechEmail", "TechPIN", "Account", "Urgency", "Shipping", "ShipToAddress", "Notes", "OrderDate", "Status"]]);
+  orders.getRange(1, 1, 1, 11).setFontWeight("bold").setBackground("#1a1a1a").setFontColor("#ffffff");
   orders.setFrozenRows(1);
-  orders.autoResizeColumns(1, 9);
+  orders.autoResizeColumns(1, 11);
 
   // Create OrderItems sheet
   let items = ss.getSheetByName("OrderItems");
@@ -87,18 +87,17 @@ function setupSheet() {
 }
 
 // ============================================================================
-// SHEET REFERENCES (lazy-loaded to avoid errors before setup)
+// SHEET REFERENCES — all lazy-loaded so script works before setup
 // ============================================================================
 
 function getSheet(name) {
   return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
 }
 
-const SS = SpreadsheetApp.getActiveSpreadsheet();
-const ORDERS_SHEET = SS.getSheetByName("Orders");
-const ORDER_ITEMS_SHEET = SS.getSheetByName("OrderItems");
-const TECHNICIANS_SHEET = SS.getSheetByName("Technicians");
-const CONFIG_SHEET = SS.getSheetByName("Config");
+function getOrdersSheet() { return getSheet("Orders"); }
+function getOrderItemsSheet() { return getSheet("OrderItems"); }
+function getTechniciansSheet() { return getSheet("Technicians"); }
+function getConfigSheet() { return getSheet("Config"); }
 
 // ============================================================================
 // MAIN ENTRY POINTS
@@ -107,8 +106,7 @@ const CONFIG_SHEET = SS.getSheetByName("Config");
 function doGet(e) {
   const response = handleRequest(e.parameter);
   return ContentService.createTextOutput(JSON.stringify(response))
-    .setMimeType(ContentService.MimeType.JSON)
-    .setHeader("Access-Control-Allow-Origin", "*");
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 function doPost(e) {
@@ -125,8 +123,7 @@ function doPost(e) {
 
   const response = handleRequest(params);
   return ContentService.createTextOutput(JSON.stringify(response))
-    .setMimeType(ContentService.MimeType.JSON)
-    .setHeader("Access-Control-Allow-Origin", "*");
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 // ============================================================================
@@ -192,9 +189,14 @@ function handleRequest(params) {
 // AUTH ACTIONS
 // ============================================================================
 
+// Normalize PINs to 4-digit strings (Google Sheets strips leading zeros)
+function normalizePIN(val) {
+  return String(val).padStart(4, '0');
+}
+
 function verifyTechPIN(pin) {
   const data = getTechniciansData();
-  const tech = data.find(t => t.PIN === pin && t.Active === TRUE);
+  const tech = data.find(t => normalizePIN(t.PIN) === normalizePIN(pin) && (t.Active === true || String(t.Active).toUpperCase() === "TRUE"));
 
   if (!tech) {
     return { success: false, error: "Invalid PIN" };
@@ -202,15 +204,13 @@ function verifyTechPIN(pin) {
 
   return {
     success: true,
-    name: tech.Name,
-    email: tech.Email,
-    pin: tech.PIN
+    data: { name: tech.Name, email: tech.Email, pin: String(tech.PIN) }
   };
 }
 
 function verifyPartsTeamPIN(pin) {
   const config = getConfigMap();
-  if (config.PartsTeamPIN === pin) {
+  if (normalizePIN(config.PartsTeamPIN) === normalizePIN(pin)) {
     return { success: true };
   }
   return { success: false, error: "Invalid PIN" };
@@ -218,7 +218,7 @@ function verifyPartsTeamPIN(pin) {
 
 function verifyAdminPIN(pin) {
   const config = getConfigMap();
-  if (config.AdminPIN === pin) {
+  if (normalizePIN(config.AdminPIN) === normalizePIN(pin)) {
     return { success: true };
   }
   return { success: false, error: "Invalid PIN" };
@@ -233,6 +233,8 @@ function placeOrder(params) {
     techPin,
     account,
     urgency,
+    shipping,
+    shipToAddress,
     notes,
     items // array of {itemNumber, itemDescription, vendorName, vendorItemNum, uom, qtyOrdered}
   } = params;
@@ -248,7 +250,7 @@ function placeOrder(params) {
   const today = new Date();
 
   // Get tech info
-  const techData = getTechniciansData().find(t => t.PIN === techPin);
+  const techData = getTechniciansData().find(t => normalizePIN(t.PIN) === normalizePIN(techPin));
 
   // Add to Orders sheet
   const ordersData = [
@@ -258,12 +260,14 @@ function placeOrder(params) {
     techPin,
     account,
     urgency,
+    shipping || "Scheduled Delivery",
+    shipToAddress || "",
     notes,
     today.toISOString().split('T')[0],
     "Open"
   ];
 
-  ORDERS_SHEET.appendRow(ordersData);
+  getOrdersSheet().appendRow(ordersData);
 
   // Add to OrderItems sheet
   if (items && items.length > 0) {
@@ -282,7 +286,7 @@ function placeOrder(params) {
         "", // FillDate
         "" // FillNotes
       ];
-      ORDER_ITEMS_SHEET.appendRow(orderItemData);
+      getOrderItemsSheet().appendRow(orderItemData);
     }
   }
 
@@ -300,6 +304,7 @@ Tech Name: ${techData.Name}
 Tech Email: ${techData.Email}
 Account: ${account}
 Urgency: ${urgency}
+Shipping: ${shipping || 'Scheduled Delivery'}${shipToAddress ? '\nShip-To Address: ' + shipToAddress : ''}
 Date: ${today.toISOString().split('T')[0]}
 Notes: ${notes || 'None'}
 
@@ -324,7 +329,7 @@ function getOrdersByTech(pin) {
   const ordersData = getOrdersData();
   const itemsData = getOrderItemsData();
 
-  const techOrders = ordersData.filter(o => o.TechPIN === pin);
+  const techOrders = ordersData.filter(o => normalizePIN(o.TechPIN) === normalizePIN(pin));
   const result = techOrders.map(order => {
     const items = itemsData.filter(i => i.OrderID === order.OrderID);
     return {
@@ -388,7 +393,7 @@ function getAllOrders(params) {
 
 function updateOrderItems(orderId, items) {
   const itemsData = getOrderItemsData();
-  const itemsSheet = ORDER_ITEMS_SHEET;
+  const itemsSheet = getOrderItemsSheet();
 
   // Get all rows in OrderItems sheet
   const allRows = itemsSheet.getDataRange().getValues();
@@ -470,8 +475,8 @@ function addTechnician(params) {
     return { success: false, error: "Missing required fields: name, pin, email" };
   }
 
-  const row = [name, pin, email, TRUE];
-  TECHNICIANS_SHEET.appendRow(row);
+  const row = [name, pin, email, true];
+  getTechniciansSheet().appendRow(row);
 
   return {
     success: true,
@@ -483,7 +488,7 @@ function updateTechnician(params) {
   const { pin, name, email, active } = params;
 
   const data = getTechniciansData();
-  const allRows = TECHNICIANS_SHEET.getDataRange().getValues();
+  const allRows = getTechniciansSheet().getDataRange().getValues();
   const headers = allRows[0];
 
   const colIndex = {
@@ -494,10 +499,10 @@ function updateTechnician(params) {
   };
 
   for (let i = 1; i < allRows.length; i++) {
-    if (allRows[i][colIndex.PIN] === pin) {
-      if (name) TECHNICIANS_SHEET.getRange(i + 1, colIndex.Name + 1).setValue(name);
-      if (email) TECHNICIANS_SHEET.getRange(i + 1, colIndex.Email + 1).setValue(email);
-      if (active !== undefined) TECHNICIANS_SHEET.getRange(i + 1, colIndex.Active + 1).setValue(active);
+    if (normalizePIN(allRows[i][colIndex.PIN]) === normalizePIN(pin)) {
+      if (name) getTechniciansSheet().getRange(i + 1, colIndex.Name + 1).setValue(name);
+      if (email) getTechniciansSheet().getRange(i + 1, colIndex.Email + 1).setValue(email);
+      if (active !== undefined) getTechniciansSheet().getRange(i + 1, colIndex.Active + 1).setValue(active);
 
       return { success: true, message: "Technician updated successfully" };
     }
@@ -507,7 +512,7 @@ function updateTechnician(params) {
 }
 
 function deleteTechnician(pin) {
-  return updateTechnician({ pin: pin, active: FALSE });
+  return updateTechnician({ pin: pin, active: false });
 }
 
 function getConfig() {
@@ -526,7 +531,7 @@ function updateConfig(params) {
   }
 
   const data = getConfigData();
-  const allRows = CONFIG_SHEET.getDataRange().getValues();
+  const allRows = getConfigSheet().getDataRange().getValues();
   const headers = allRows[0];
 
   const colIndex = {
@@ -536,13 +541,13 @@ function updateConfig(params) {
 
   for (let i = 1; i < allRows.length; i++) {
     if (allRows[i][colIndex.Key] === key) {
-      CONFIG_SHEET.getRange(i + 1, colIndex.Value + 1).setValue(value);
+      getConfigSheet().getRange(i + 1, colIndex.Value + 1).setValue(value);
       return { success: true, message: "Config updated successfully" };
     }
   }
 
   // If key doesn't exist, add it
-  CONFIG_SHEET.appendRow([key, value]);
+  getConfigSheet().appendRow([key, value]);
   return { success: true, message: "Config added successfully" };
 }
 
@@ -618,13 +623,13 @@ function updateOrderStatus(orderId) {
 
   // Update Orders sheet
   const ordersData = getOrdersData();
-  const allRows = ORDERS_SHEET.getDataRange().getValues();
+  const allRows = getOrdersSheet().getDataRange().getValues();
   const headers = allRows[0];
   const statusColIndex = headers.indexOf("Status");
 
   for (let i = 1; i < allRows.length; i++) {
     if (allRows[i][headers.indexOf("OrderID")] === orderId) {
-      ORDERS_SHEET.getRange(i + 1, statusColIndex + 1).setValue(status);
+      getOrdersSheet().getRange(i + 1, statusColIndex + 1).setValue(status);
       break;
     }
   }
@@ -670,7 +675,7 @@ function sendFulfillmentEmail(orderId, techEmail) {
 // ============================================================================
 
 function getOrdersData() {
-  const sheet = ORDERS_SHEET;
+  const sheet = getOrdersSheet();
   const data = sheet.getDataRange().getValues();
   const headers = data[0];
 
@@ -681,6 +686,8 @@ function getOrdersData() {
     TechPIN: row[headers.indexOf("TechPIN")],
     Account: row[headers.indexOf("Account")],
     Urgency: row[headers.indexOf("Urgency")],
+    Shipping: row[headers.indexOf("Shipping")] || "Scheduled Delivery",
+    ShipToAddress: row[headers.indexOf("ShipToAddress")] || "",
     Notes: row[headers.indexOf("Notes")],
     OrderDate: row[headers.indexOf("OrderDate")],
     Status: row[headers.indexOf("Status")]
@@ -688,7 +695,7 @@ function getOrdersData() {
 }
 
 function getOrderItemsData() {
-  const sheet = ORDER_ITEMS_SHEET;
+  const sheet = getOrderItemsSheet();
   const data = sheet.getDataRange().getValues();
   const headers = data[0];
 
@@ -709,7 +716,7 @@ function getOrderItemsData() {
 }
 
 function getTechniciansData() {
-  const sheet = TECHNICIANS_SHEET;
+  const sheet = getTechniciansSheet();
   const data = sheet.getDataRange().getValues();
   const headers = data[0];
 
@@ -722,13 +729,13 @@ function getTechniciansData() {
 }
 
 function getConfigData() {
-  const sheet = CONFIG_SHEET;
+  const sheet = getConfigSheet();
   const data = sheet.getDataRange().getValues();
   return data.slice(1);
 }
 
 function getConfigMap() {
-  const sheet = CONFIG_SHEET;
+  const sheet = getConfigSheet();
   const data = sheet.getDataRange().getValues();
   const headers = data[0];
   const result = {};
