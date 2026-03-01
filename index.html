@@ -7,7 +7,7 @@
     <style>
         :root {
             --primary-black: #1a1a1a;
-            --white: #ffffff;
+            --white: #ffffff;h
             --light-gray: #f5f5f5;
             --medium-gray: #d0d0d0;
             --dark-gray: #666666;
@@ -1289,7 +1289,7 @@
         }
 
         function performSearch(query) {
-            if (!window.PARTS_CATALOG) {
+            if (typeof PARTS_CATALOG === 'undefined' || !PARTS_CATALOG) {
                 searchResults.innerHTML = '<p class="text-center text-error">Parts data not loaded</p>';
                 return;
             }
