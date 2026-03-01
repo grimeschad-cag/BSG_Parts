@@ -1505,19 +1505,7 @@
             if (result && result.filledItems && result.filledItems.length > 0) {
                 generateExcel(result.filledItems, 'Filled_Items_Report.xlsx');
             } else {
-                // Debug: show what the API sees
-                const debug = await apiCall('debugFilledData', {});
-                console.log('DEBUG filled data:', JSON.stringify(debug, null, 2));
-                let msg = 'No filled items found for this date range.';
-                if (debug && debug.sampleItems) {
-                    const withFill = debug.sampleItems.filter(i => parseInt(i.QtyFilled) > 0);
-                    if (withFill.length > 0) {
-                        msg += ' Debug: Found ' + debug.totalItems + ' total items. Sample filled: FillDate="' + withFill[0].FillDate + '" (type:' + withFill[0].FillDateType + ', normalized:"' + withFill[0].FillDateNormalized + '"), today="' + debug.today + '"';
-                    } else {
-                        msg += ' Debug: No items have QtyFilled > 0 in sheet.';
-                    }
-                }
-                showToast(msg, 'info');
+                showToast('No filled items found for this date range', 'info');
             }
         }
 
